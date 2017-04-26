@@ -1,0 +1,45 @@
+<launch>
+  <arg name="right_electric_gripper" default="true"/>
+  <arg name="left_electric_gripper" default="true"/>
+  <arg name="left_tip_name" default="left_gripper"/>
+  
+  <arg name="right_tip_name" default="right_gripper"/>
+  <param name="robot_description"
+      command="$(find xacro)/xacro.py --inorder $(find baxter_description)/urdf/baxter.urdf.xacro"/>
+  <param name="robot_description_semantic"
+      command="$(find xacro)/xacro.py --inorder $(find baxter_moveit_config)/config/baxter.srdf.xacro
+          left_electric_gripper:=$(arg left_electric_gripper)
+          right_electric_gripper:=$(arg right_electric_gripper)
+          left_tip_name:=$(arg left_tip_name)
+          right_tip_name:=$(arg right_tip_name)"/>
+
+  <rosparam command="load" file="$(find baxter_moveit_config)/config/kinematics.yaml"/>
+  <rosparam command="load" file="$(find baxter_moveit_config)/config/ompl_planning.yaml"/>
+  
+  <node name="move_group" pkg="moveit_ros_move_group" type="move_group" output="screen" args="joint_states:=/robot/joint_states">
+   <env name="DISPLAY" value="$(optenv DISPLAY :0)" />
+    <param name="capabilities" value="move_group/MoveGroupCartesianPathService
+				      move_group/MoveGroupExecuteService
+				      move_group/MoveGroupKinematicsService
+				      move_group/MoveGroupMoveAction
+				      move_group/MoveGroupPickPlaceAction
+				      move_group/MoveGroupPlanService
+				      move_group/MoveGroupQueryPlannersService
+				      move_group/MoveGroupStateValidationService
+				      move_group/MoveGroupGetPlanningSceneService
+				      " />
+   <param name="request_adapters" value="default_planner_request_adapters/AddTimeParameterization
+				       default_planner_request_adapters/FixWorkspaceBounds
+				       default_planner_request_adapters/FixStartStateBounds
+				       default_planner_request_adapters/FixStartStateCollision
+				       default_planner_request_adapters/FixStartStatePathConstraints" />
+   <param name="planning_scene_monitor/publish_planning_scene" value="true" />
+   <param name="planning_scene_monitor/publish_geometry_updates" value="true" />
+   <param name="planning_scene_monitor/publish_state_updates" value="true" />
+   <param name="planning_scene_monitor/publish_transforms_updates" value="true" />
+   <param name="moveit_controller_manager" value="moveit_simple_controller_manager/MoveItSimpleControllerManager" />
+   <param name="allow_trajectory_execution" value="true"/>
+   <param name="moveit_manage_controllers" value="true"/>
+  <rosparam file="$(find baxter_moveit_config)/config/baxter_controllers.yaml"/>
+  </node>
+</launch>

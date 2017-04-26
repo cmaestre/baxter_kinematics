@@ -1,0 +1,3 @@
+real_robot: False
+right_eef_home_pos: {x: 0.18, y: -0.6, z: 0.17}
+eef_rotation: {x: 0, y: 3.1415, z: 0}
