@@ -32,16 +32,19 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
     ROS_INFO("Establish communication tools");
     bool real_robot;
     nh.getParam("real_robot", real_robot);
-    if (!real_robot)
-        ros::Subscriber sub_jointmsg = nh.subscribe<sensor_msgs::JointState>("/robot/joint_states",1,boost::bind(jocommCallback_sim,
-                                                                                                                _1,
-                                                                                                                left_arm_joint_values,
-                                                                                                                right_arm_joint_values));
-    else
-        ros::Subscriber sub_jointmsg = nh.subscribe<sensor_msgs::JointState>("/robot/joint_states",1,boost::bind(jocommCallback_real,
-                                                                                                                _1,
-                                                                                                                left_arm_joint_values,
-                                                                                                                right_arm_joint_values));
+    ros::Subscriber sub_jointmsg;
+    if (!real_robot){
+        sub_jointmsg = nh.subscribe<sensor_msgs::JointState>("/robot/joint_states",1,boost::bind(jocommCallback_sim,
+                                                                                                 _1,
+                                                                                                 boost::ref(left_arm_joint_values),
+                                                                                                 boost::ref(right_arm_joint_values)));
+    }
+    else{
+        sub_jointmsg = nh.subscribe<sensor_msgs::JointState>("/robot/joint_states",1,boost::bind(jocommCallback_real,
+                                                                                                 _1,
+                                                                                                 boost::ref(left_arm_joint_values),
+                                                                                                 boost::ref(right_arm_joint_values)));
+    }
 
     ros::Subscriber sub_l_eef_msg = nh.subscribe<baxter_core_msgs::EndpointState>("/robot/limb/left/endpoint_state", 10, left_eef_Callback);
     ros::Subscriber sub_r_eef_msg = nh.subscribe<baxter_core_msgs::EndpointState>("/robot/limb/right/endpoint_state", 10, right_eef_Callback);
@@ -139,10 +142,10 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
                                                   object_position_vector,
                                                   object_orientation_vector,
                                                   eef_values,
+                                                  nh,
                                                   true, //feedback data
                                                   true, //publish topic
                                                   feedback_frequency,
-                                                  nh,
                                                   traj_res_pub);
     else if(strcmp(req.eef_name.c_str(), "right") == 0)
         traj_res = plan_and_execute_waypoint_traj("right",
@@ -156,10 +159,10 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
                                                   object_position_vector,
                                                   object_orientation_vector,
                                                   eef_values,
+                                                  nh,
                                                   true, //feedback data
                                                   true, //publish topic
                                                   feedback_frequency,
-                                                  nh,
                                                   traj_res_pub);
     else{
         ROS_ERROR("please specify in service request, left or right arm");

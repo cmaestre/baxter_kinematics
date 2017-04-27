@@ -4,7 +4,7 @@
  * @brief jocommCallback: call back to get feedback about joints angles
  * @param the topic msgs about joints states
 **/
-void jocommCallback_sim(const sensor_msgs::JointStateConstPtr& jo_state,
+void jocommCallback_sim(const sensor_msgs::JointState::ConstPtr& jo_state,
                          std::vector<double> &left_arm_joint_values,
                          std::vector<double> &right_arm_joint_values)
 {
@@ -30,7 +30,7 @@ void jocommCallback_sim(const sensor_msgs::JointStateConstPtr& jo_state,
  * @brief jocommCallback: call back to get feedback about joints angles
  * @param the topic msgs about joints states
 **/
-void jocommCallback_real(const sensor_msgs::JointStateConstPtr& jo_state,
+void jocommCallback_real(const sensor_msgs::JointState::ConstPtr& jo_state,
                          std::vector<double> &left_arm_joint_values,
                          std::vector<double> &right_arm_joint_values)
 {
@@ -209,7 +209,8 @@ bool restart_robot_initial_position(robot_state::RobotState robot_state,
                                            dummy,
                                            dummy,
                                            dummy,
-                                           eef_values);
+                                           eef_values,
+                                           nh);
 
     if (!right_res){
         ROS_ERROR_STREAM("restart_robot_initial_position : Failed executing right arm motion");
@@ -251,7 +252,8 @@ bool restart_robot_initial_position(robot_state::RobotState robot_state,
                                            dummy,
                                            dummy,
                                            dummy,
-                                           eef_values);
+                                           eef_values,
+                                           nh);
     if (!left_res){
         ROS_ERROR_STREAM("restart_robot_initial_position : Failed executing left arm motion");
         return false;
@@ -522,10 +524,10 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
                                     std::vector<Eigen::Vector3d>& object_position_vector,
                                     std::vector<Eigen::Vector3d>& object_orientation_vector,
                                     Kinematic_values& eef_values,
+                                    ros::NodeHandle nh,
                                     bool feedback_data,
                                     bool publish_topic,
                                     int feedback_frequency,
-                                    ros::NodeHandle nh,
                                     ros::Publisher traj_res_pub){
 
 
@@ -962,7 +964,9 @@ bool plan_traj_to_goal_joint_config(Kinematic_values eef_values,
                                     Eigen::Vector3d position,
                                     std::string cube_side,
                                     std::vector<Eigen::Vector3d> mid_point_position_vector,
-                                    bool try_different_seed){
+                                    ros::NodeHandle nh,
+                                    bool try_different_seed
+                                    ){
 
     std::vector<Eigen::Vector3d> path, final_path, current_path;
     bool res_move = true;
@@ -988,10 +992,9 @@ bool plan_traj_to_goal_joint_config(Kinematic_values eef_values,
         //                       eef_values.get_left_eef_initial_rot_z());
 
         double rot_x, rot_y, rot_z;
-        ros::NodeHandle tmp_nh;
-        tmp_nh.getParam("eef_rotation/x", rot_x);
-        tmp_nh.getParam("eef_rotation/y", rot_y);
-        tmp_nh.getParam("eef_rotation/z", rot_z);
+        nh.getParam("eef_rotation/x", rot_x);
+        nh.getParam("eef_rotation/y", rot_y);
+        nh.getParam("eef_rotation/z", rot_z);
         my_orientation.setRPY(rot_x, rot_y, rot_z);
 
         my_desired_pose.header.frame_id = "/base";

@@ -39,11 +39,11 @@
 
 #include "../../src/lib/eef_values.hpp"
 
-void jocommCallback_sim(const sensor_msgs::JointStateConstPtr& jo_state,
+void jocommCallback_sim(const sensor_msgs::JointState::ConstPtr &jo_state,
                          std::vector<double> &left_arm_joint_values,
                          std::vector<double> &right_arm_joint_values);
 
-void jocommCallback_real(const sensor_msgs::JointStateConstPtr& jo_state,
+void jocommCallback_real(const sensor_msgs::JointState::ConstPtr& jo_state,
                          std::vector<double> &left_arm_joint_values,
                          std::vector<double> &right_arm_joint_values);
 
@@ -79,7 +79,8 @@ bool restart_robot_initial_position(moveit::core::RobotState robot_state,
                                     Kinematic_values &eef_values,
                                     ros::ServiceClient &gazebo_model_state,
                                     actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> &ac_left,
-                                    actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> &ac_right);
+                                    actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> &ac_right,
+                                    ros::NodeHandle nh);
 
 /**
  * @brief execute the descartes motion to a desired final position
@@ -91,7 +92,8 @@ bool plan_path_to_desired_position(moveit::core::RobotState robot_state, Eigen::
                                    std::string my_side,
                                    std::vector<Eigen::Vector3d> mid_point_position_vector,
                                    std::vector<Eigen::Vector3d> &path,
-                                   std::vector<Eigen::Vector3d> &final_path, Kinematic_values &eef_values);
+                                   std::vector<Eigen::Vector3d> &final_path,
+                                   Kinematic_values &eef_values);
 
 /**
  * @brief find the largest difference between elements of two std::vectors of doubles
@@ -138,10 +140,10 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
                                     std::vector<Eigen::Vector3d>& object_position_vector,
                                     std::vector<Eigen::Vector3d>& object_orientation_vector,
                                     Kinematic_values &eef_values,
+                                    ros::NodeHandle nh,
                                     bool feedback_data = false,
                                     bool publish_topic = false,
                                     int feedback_frequency = 1,
-                                    ros::NodeHandle nh = ros::NodeHandle(),
                                     ros::Publisher traj_res_pub = ros::Publisher());
 /**
  * @brief This method should help retrun the cube to a reachable position for robot arm
@@ -168,6 +170,7 @@ bool plan_traj_to_goal_joint_config(Kinematic_values eef_values,
                                     Eigen::Vector3d position,
                                     std::string cube_side,
                                     std::vector<Eigen::Vector3d> mid_point_position_vector,
+                                    ros::NodeHandle nh,
                                     bool try_different_seed = false);
 
 /** execute a trajectory (nothing returned)
