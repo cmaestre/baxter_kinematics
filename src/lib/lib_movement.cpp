@@ -1,4 +1,5 @@
 #include "../../include/baxter_kinematics/lib_movement.hpp"
+#include "environment_functionalities/GetObjectState.h"
 
 /**
  * @brief jocommCallback: call back to get feedback about joints angles
@@ -166,44 +167,55 @@ std::tuple<Eigen::Vector3d, Eigen::Vector3d> get_eef_pose(
  * @param b
 **/
 bool restart_robot_initial_position(robot_state::RobotState robot_state,
-                                    std::string option,
                                     Kinematic_values& eef_values,
-                                    ros::ServiceClient& gazebo_model_state,
                                     actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>& ac_left,
                                     actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>& ac_right,
-                                    ros::NodeHandle nh){
+                                    ros::NodeHandle nh,
+                                    std::vector<double> &left_arm_joint_values,
+                                    std::vector<double> &right_arm_joint_values,
+                                    std::vector<double> &all_joint_values){
 
-    std::vector<Eigen::Vector3d> mid_point_position_vector(4);
-    // std::string temp_side = eef_values.get_cube_side_value(4); //NO_SIDE
+    // get current position
+    std::vector<std::string> left_joint_names = {"left_s0", "left_s1", "left_e0", "left_e1", "left_w0", "left_w1", "left_w2"};
+    std::vector<std::string> right_joint_names = {"right_s0", "right_s1", "right_e0", "right_e1", "right_w0", "right_w1", "right_w2"};
+    std::vector<std::string> all_joint_names;
+
+    bool real_robot;
+    nh.getParam("real_robot", real_robot);
+    if(real_robot)
+        robot_state.setVariablePositions(all_joint_names, all_joint_values);
+
     std::vector<Eigen::Vector3d> dummy;
-
     ////////////////////////////////////////////////////////////////////////
     // Right arm
-    ROS_INFO("\nRight arm to home position");
-    Eigen::Vector3d right_eef_home_pos;
+    ROS_INFO("\nRight arm to initial position");
+
+    if(!real_robot)
+        robot_state.setVariablePositions(right_joint_names, right_arm_joint_values);
+
+    Eigen::Vector3d right_eef_initial_pos;
     double tmp_x, tmp_y, tmp_z;
-    nh.getParam("right_eef_home_pos/x", tmp_x);
-    nh.getParam("right_eef_home_pos/y", tmp_y);
-    nh.getParam("right_eef_home_pos/z", tmp_z);
-    right_eef_home_pos << tmp_x,
+    nh.getParam("right_eef/initial_pos/x", tmp_x);
+    nh.getParam("right_eef/initial_pos/y", tmp_y);
+    nh.getParam("right_eef/initial_pos/z", tmp_z);
+    right_eef_initial_pos << tmp_x,
                           tmp_y,
                           tmp_z;
 
-    std::vector<geometry_msgs::Pose> waypoints;
     std::string gripper = "right_gripper";
-    geometry_msgs::Pose start_pose = eef_values.get_eef_pose(gripper);
-    start_pose.position.x = right_eef_home_pos[0];
-    start_pose.position.y = right_eef_home_pos[1];
-    start_pose.position.z = right_eef_home_pos[2];
-    waypoints.push_back(start_pose);
-    ROS_ERROR_STREAM("Right arm initial position : " << start_pose.position.x << " " << start_pose.position.y << " " << start_pose.position.z);
+    geometry_msgs::Pose initial_pose = eef_values.get_eef_pose(gripper); // to get the rotation
+    initial_pose.position.x = right_eef_initial_pos[0];
+    initial_pose.position.y = right_eef_initial_pos[1];
+    initial_pose.position.z = right_eef_initial_pos[2];
+    std::vector<geometry_msgs::Pose> waypoints;
+    waypoints.push_back(initial_pose);
+    ROS_ERROR_STREAM("Right eef initial position : " << initial_pose.position.x << " " << initial_pose.position.y << " " << initial_pose.position.z);
 
     bool right_res =
             plan_and_execute_waypoint_traj("right",
                                            waypoints,
                                            robot_state,
                                            ac_right,
-                                           gazebo_model_state,
                                            "",
                                            dummy,
                                            dummy,
@@ -220,33 +232,33 @@ bool restart_robot_initial_position(robot_state::RobotState robot_state,
     //////////////////////////////////////////////////////////////////////////
     // Left arm
     ROS_INFO("\nLeft arm to initial pose");
-//    Eigen::Vector3d left_untuck_pos;
-//    left_untuck_pos << 0.58,
-//            0.183,
-//            0.113;
 
-//    left_untuck_pos << 0.65,
-//                       0.25,
-//                       -0.03;
+    if(!real_robot)
+        robot_state.setVariablePositions(left_joint_names, left_arm_joint_values);
 
-    Eigen::Vector3d l_eef_init_position;
-    l_eef_init_position = eef_values.get_eef_init_position("left");
+    Eigen::Vector3d left_eef_initial_pos;
+    nh.getParam("left_eef/initial_pos/x", tmp_x);
+    nh.getParam("left_eef/initial_pos/y", tmp_y);
+    nh.getParam("left_eef/initial_pos/z", tmp_z);
+    left_eef_initial_pos << tmp_x,
+                          tmp_y,
+                          tmp_z;
 
     gripper = "left_gripper";
-    start_pose = eef_values.get_eef_pose(gripper);
-    start_pose.position.x = l_eef_init_position[0];
-    start_pose.position.y = l_eef_init_position[1];
-    start_pose.position.z = l_eef_init_position[2];
+    initial_pose = eef_values.get_eef_pose(gripper);
+    initial_pose.position.x = left_eef_initial_pos[0];
+    initial_pose.position.y = left_eef_initial_pos[1];
+    initial_pose.position.z = left_eef_initial_pos[2];
+
     waypoints.clear();
-    waypoints.push_back(start_pose);
-    ROS_ERROR_STREAM("EEF initial position :" << start_pose.position.x << " " << start_pose.position.y << " " << start_pose.position.z);
+    waypoints.push_back(initial_pose);
+    ROS_ERROR_STREAM("Left eef initial position :" << initial_pose.position.x << " " << initial_pose.position.y << " " << initial_pose.position.z);
 
     bool left_res =
             plan_and_execute_waypoint_traj("left",
                                            waypoints,
                                            robot_state,
                                            ac_left,
-                                           gazebo_model_state,
                                            "",
                                            dummy,
                                            dummy,
@@ -517,8 +529,7 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
                                     std::vector<geometry_msgs::Pose> waypoints,
                                     robot_state::RobotState robot_state,
                                     actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>& ac,
-                                    ros::ServiceClient &gazebo_model_state,
-                                    std::string model_name,
+                                    std::string object_name,
                                     std::vector<Eigen::Vector3d>& eef_position_vector,
                                     std::vector<Eigen::Vector3d>& eef_orientation_vector,
                                     std::vector<Eigen::Vector3d>& object_position_vector,
@@ -564,18 +575,8 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
                           sqrt(pow(eef_values.get_eef_position(eef_selected)(2) - last_wp.z,2))));
         return true;
     }
-    //    else
-    //        ROS_ERROR_STREAM(sqrt(pow(link_pose.translation()[0]-last_wp.x,2)) +
-    //                         sqrt(pow(link_pose.translation()[1]-last_wp.y,2)) +
-    //                         sqrt(pow(link_pose.translation()[2]-last_wp.z,2)));
 
-    //make sure the orientation is equal to {w = , x = , y = , z = }, with left arm only, by simply re-write orientation part of the waypoints
-//    if (strcmp(arm_selected.c_str(), "left_arm") == 0){
-        geometry_msgs::Pose correct_orientation = eef_values.get_eef_pose(eef_selected);
-//        correct_orientation.orientation.w = 0.02547;
-//        correct_orientation.orientation.x = 0.140766;
-//        correct_orientation.orientation.y = 0.9896;
-//        correct_orientation.orientation.z = 0.0116586;
+    geometry_msgs::Pose correct_orientation = eef_values.get_eef_pose(eef_selected);
     correct_orientation.orientation.w = 0.0;
     correct_orientation.orientation.x = -0.0;
     correct_orientation.orientation.y = 1;
@@ -584,7 +585,6 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
     std::vector<geometry_msgs::Pose>::iterator wp_itr;
     for(wp_itr = waypoints.begin(); wp_itr != waypoints.end(); wp_itr++)
         wp_itr->orientation = correct_orientation.orientation;
-//    }
 
     std::vector<geometry_msgs::Pose>::iterator waypoint_iter;
     for(waypoint_iter = waypoints.begin(); waypoint_iter != waypoints.end(); waypoint_iter++){
@@ -658,8 +658,8 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
         ROS_ERROR_STREAM("waypoints size is: " << waypoints.size());
     ROS_ERROR_STREAM("waypoints size is: " << waypoints.size());
 
-    bool real_robot;
-    nh.getParam("real_robot", real_robot);    
+//    ros::ServiceClient client_get_object_pose = nh.serviceClient<environment_functionalities::GetObjectState>("/env/get_object_state");
+//    environment_functionalities::GetObjectState getObjectStateSrv;
     int count = 0;
     while(!ac.getState().isDone()){
         if(feedback_data && fraction == 1){
@@ -670,16 +670,7 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
             curr_eff_position[1] = eef_pose(1);
             curr_eff_position[2] = eef_pose(2);
             nh.setParam("/stop_traj", false);
-//            bool stop_traj;
-            // check if it is equal to any of the trajectory points
-            // and store feedback
             for(size_t i = 0; i < waypoints.size(); ++i){
-//                nh.getParam("/stop_traj", stop_traj);
-//                if (stop_traj == true){
-//                    ac.cancelGoal();
-//                    ROS_ERROR_STREAM("Trajectory stopped!!");
-//                    return false;
-//                }
                 expected_traj_position[0] = waypoints[i].position.x;
                 expected_traj_position[1] = waypoints[i].position.y;
                 expected_traj_position[2] = waypoints[i].position.z;
@@ -688,76 +679,44 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
                     waypoints.erase(waypoints.begin() + i);
                     count+=1;
 
-                    //save eef coordinates
-                    eef_position_vector.push_back(eef_values.get_eef_position(eef_selected));
-                    eef_orientation_vector.push_back(eef_values.get_eef_rpy_orientation(eef_selected));
+//                    //save eef values
+//                    eef_pose = eef_values.get_eef_position(eef_selected);
+//                    eef_position_vector.push_back(eef_pose);
+//                    eef_orientation_vector.push_back(eef_values.get_eef_rpy_orientation(eef_selected));
 
-                    //save object values
-                    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-                    /// \brief cube_values: for simulation this is ok, but for the real robot we should link this to the output of the node that records object position
-                    if(!real_robot){
-                        // auto cube_values = get_object_values(model_name, gazebo_model_state, true);
-                        // gazebo_msgs::GetModelState& cube_pose = std::get<0>(cube_values);
-                        //Eigen::Vector3d current_object_position;
-                        // current_object_position <<  cube_pose.response.pose.position.x,
-                        //                             cube_pose.response.pose.position.y,
-                        //                             cube_pose.response.pose.position.z;
+//                    //save object values
+//                    getObjectStateSrv.request.object_name = object_name;
+//                    client_get_object_pose.call(getObjectStateSrv);
+//                    std::vector<double> object_state_vector = getObjectStateSrv.response.object_state;
 
-                        Eigen::Vector3d current_object_position;
-                        current_object_position <<  0.0,
-                                                    0.0,
-                                                    0.0;
-                        object_position_vector.push_back(current_object_position);
+//                    Eigen::Vector3d current_object_position;
+//                    current_object_position <<  object_state_vector[0],
+//                                                object_state_vector[1],
+//                                                object_state_vector[2];
+//                    object_position_vector.push_back(current_object_position);
 
-                        // double roll = std::get<1>(cube_values);
-                        // double pitch = std::get<2>(cube_values);
-                        // double yaw = std::get<3>(cube_values);
-                        Eigen::Vector3d current_object_orientation;
-                        // current_object_orientation << roll, pitch, yaw;
-                        current_object_orientation <<  0.0,   
-                                                       0.0,
-                                                       0.0;
+//                    Eigen::Vector3d current_object_orientation;
+//                    current_object_orientation << object_state_vector[3],
+//                                                  object_state_vector[4],
+//                                                  object_state_vector[5];
+//                    object_orientation_vector.push_back(current_object_orientation);
 
-                        object_orientation_vector.push_back(current_object_orientation);
-                        // to publish values
-                        real_traj_to_publish.data.push_back(eef_pose(0));
-                        real_traj_to_publish.data.push_back(eef_pose(1));
-                        real_traj_to_publish.data.push_back(eef_pose(2));
-                        // real_traj_to_publish.data.push_back(cube_pose.response.pose.position.x);
-                        // real_traj_to_publish.data.push_back(cube_pose.response.pose.position.y);
-                        // real_traj_to_publish.data.push_back(cube_pose.response.pose.position.z);
-                        real_traj_to_publish.data.push_back(-99);
-                        real_traj_to_publish.data.push_back(-99);
-                        real_traj_to_publish.data.push_back(-99);
-                    }
-                    else{
-                        // to publish values
-                        real_traj_to_publish.data.push_back(eef_pose(0));
-                        real_traj_to_publish.data.push_back(eef_pose(1));
-                        real_traj_to_publish.data.push_back(eef_pose(2));
-                        //for the object position put zeros for the moment
-                        Eigen::Vector3d current_object_position;
-                        current_object_position <<  0.0,
-                                                    0.0,
-                                                    0.0;
-                        Eigen::Vector3d current_object_orientation;
-                        current_object_orientation << 0.0, 0.0, 0.0;
-                        object_orientation_vector.push_back(current_object_orientation);
-                        object_position_vector.push_back(current_object_position);
-                        real_traj_to_publish.data.push_back(0.0);
-                        real_traj_to_publish.data.push_back(0.0);
-                        real_traj_to_publish.data.push_back(0.0);
-                        //here we should add the real position of the object
-                    }
+                    //store to publish afterwards
+                    real_traj_to_publish.data.push_back(eef_pose(0));
+                    real_traj_to_publish.data.push_back(eef_pose(1));
+                    real_traj_to_publish.data.push_back(eef_pose(2));
+//                    real_traj_to_publish.data.push_back(object_state_vector[0]);
+//                    real_traj_to_publish.data.push_back(object_state_vector[1]);
+//                    real_traj_to_publish.data.push_back(object_state_vector[2]);
 
                     added_waypoint++;
 
-//                    if (publish_topic && (added_waypoint == feedback_frequency)){
-//                        added_waypoint = 0;
-//                        ROS_ERROR_STREAM("Printing in topic");
-//                        traj_res_pub.publish(real_traj_to_publish);
-//                        real_traj_to_publish.data.clear();
-//                    }
+                    if (publish_topic && (added_waypoint == feedback_frequency)){
+                        added_waypoint = 0;
+                        ROS_ERROR_STREAM("Printing in topic");
+                        traj_res_pub.publish(real_traj_to_publish);
+                        real_traj_to_publish.data.clear();
+                    }
                 }
             }
         }
@@ -769,43 +728,44 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
 //        traj_res_pub.publish(real_traj_to_publish);
 //    }
 
-    // add last eef and obj position
-    usleep(1e5);
+    // add last eef values
     eef_pose = eef_values.get_eef_position(eef_selected);
+    eef_position_vector.push_back(eef_pose);
+    eef_orientation_vector.push_back(eef_values.get_eef_rpy_orientation(eef_selected));
 
-    // auto cube_values = get_object_values(model_name, gazebo_model_state, true);
-    // gazebo_msgs::GetModelState& cube_pose = std::get<0>(cube_values);
-    Eigen::Vector3d current_object_position;
-    // current_object_position <<  cube_pose.response.pose.position.x,
-    //                             cube_pose.response.pose.position.y,
-    //                             cube_pose.response.pose.position.z;
-    current_object_position <<  0.0,
-                                0.0,
-                                0.0;    
-    object_position_vector.push_back(current_object_position);
-    // roll = std::get<1>(cube_values);
-    // pitch = std::get<2>(cube_values);
-    // yaw = std::get<3>(cube_values);
-    Eigen::Vector3d current_object_orientation;
-    // current_object_orientation << roll, pitch, yaw;
-    current_object_orientation <<  0.0,   
-                                   0.0,
-                                   0.0;    
-    object_orientation_vector.push_back(current_object_orientation);
+//    //add last object values
+//    getObjectStateSrv.request.object_name = object_name;
+//    client_get_object_pose.call(getObjectStateSrv);
+//    std::vector<double> object_state_vector = getObjectStateSrv.response.object_state;
 
+//    Eigen::Vector3d current_object_position;
+//    current_object_position <<  object_state_vector[0],
+//                                object_state_vector[1],
+//                                object_state_vector[2];
+//    object_position_vector.push_back(current_object_position);
+
+//    Eigen::Vector3d current_object_orientation;
+//    current_object_orientation << object_state_vector[3],
+//                                  object_state_vector[4],
+//                                  object_state_vector[5];
+//    object_orientation_vector.push_back(current_object_orientation);
+
+    //store to publish
     real_traj_to_publish.data.push_back(eef_pose(0));
     real_traj_to_publish.data.push_back(eef_pose(1));
     real_traj_to_publish.data.push_back(eef_pose(2));
-    // real_traj_to_publish.data.push_back(cube_pose.response.pose.position.x);
-    // real_traj_to_publish.data.push_back(cube_pose.response.pose.position.y);
-    // real_traj_to_publish.data.push_back(cube_pose.response.pose.position.z);
-    real_traj_to_publish.data.push_back(-98);
-    real_traj_to_publish.data.push_back(-98);
-    real_traj_to_publish.data.push_back(-98);
+//    real_traj_to_publish.data.push_back(object_state_vector[0]);
+//    real_traj_to_publish.data.push_back(object_state_vector[1]);
+//    real_traj_to_publish.data.push_back(object_state_vector[2]);
 
-    // publish full trajectory
+//    // publish full trajectory
+//    if (publish_topic && (real_traj_to_publish.data.size() > 0)) {
+//        ROS_ERROR_STREAM("Printing full traj in topic");
+//        traj_res_pub.publish(real_traj_to_publish);
+//    }
+    // publish the remaining wp of the trajectory
     if (publish_topic && (real_traj_to_publish.data.size() > 0)) {
-        ROS_ERROR_STREAM("Printing full traj in topic");
+        ROS_ERROR_STREAM("Final printing in topic");
         traj_res_pub.publish(real_traj_to_publish);
     }
 

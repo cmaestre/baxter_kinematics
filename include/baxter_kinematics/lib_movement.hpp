@@ -75,12 +75,13 @@ std::tuple<Eigen::Vector3d, Eigen::Vector3d> get_eef_pose(
  * @param b
 **/
 bool restart_robot_initial_position(moveit::core::RobotState robot_state,
-                                    std::string option,
                                     Kinematic_values &eef_values,
-                                    ros::ServiceClient &gazebo_model_state,
                                     actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> &ac_left,
                                     actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> &ac_right,
-                                    ros::NodeHandle nh);
+                                    ros::NodeHandle nh,
+                                    std::vector<double> &left_arm_joint_values,
+                                    std::vector<double> &right_arm_joint_values,
+                                    std::vector<double> &all_joint_values);
 
 /**
  * @brief execute the descartes motion to a desired final position
@@ -133,8 +134,7 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
                                     std::vector<geometry_msgs::Pose> waypoints,
                                     robot_state::RobotState robot_state,
                                     actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>& ac,
-                                    ros::ServiceClient &gazebo_model_state,
-                                    std::string model_name,
+                                    std::string object_name,
                                     std::vector<Eigen::Vector3d>& eef_position_vector,
                                     std::vector<Eigen::Vector3d>& eef_orientation_vector,
                                     std::vector<Eigen::Vector3d>& object_position_vector,

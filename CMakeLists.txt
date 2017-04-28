@@ -24,6 +24,7 @@ add_service_files(
   GetEefPose.srv
   MoveToPos.srv
   Trajectory.srv
+  RestartRobot.srv
 )
 
 generate_messages(
@@ -53,6 +54,9 @@ target_link_libraries(execute_trajectory_service ${catkin_LIBRARIES})
 
 add_executable(get_sim_eef_pose_service src/services/get_sim_eef_pose_service.cpp ${all_sources})
 target_link_libraries(get_sim_eef_pose_service ${catkin_LIBRARIES})
+
+add_executable(restart_robot_service src/services/restart_robot_service.cpp ${all_sources})
+target_link_libraries(restart_robot_service ${catkin_LIBRARIES})
 
 ## Test files
 
