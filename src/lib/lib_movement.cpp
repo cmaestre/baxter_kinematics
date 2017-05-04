@@ -199,8 +199,8 @@ bool restart_robot_initial_position(robot_state::RobotState robot_state,
     nh.getParam("right_eef/initial_pos/y", tmp_y);
     nh.getParam("right_eef/initial_pos/z", tmp_z);
     right_eef_initial_pos << tmp_x,
-                          tmp_y,
-                          tmp_z;
+                              tmp_y,
+                              tmp_z;
 
     std::string gripper = "right_gripper";
     geometry_msgs::Pose initial_pose = eef_values.get_eef_pose(gripper); // to get the rotation
@@ -566,19 +566,28 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
 
     //check if already close to position to move
     geometry_msgs::Point last_wp = waypoints[waypoints.size()-1].position;
-    if ((sqrt(pow(eef_values.get_eef_position(eef_selected)(0) - last_wp.x,2)) +
-         sqrt(pow(eef_values.get_eef_position(eef_selected)(1) - last_wp.y,2)) +
-         sqrt(pow(eef_values.get_eef_position(eef_selected)(2) - last_wp.z,2))) < 0.05){
+ROS_ERROR_STREAM("eef_values: " <<
+                 eef_values.get_eef_position(eef_selected)(0) << " " <<
+                 eef_values.get_eef_position(eef_selected)(1) << " " <<
+                 eef_values.get_eef_position(eef_selected)(2));
+ROS_ERROR_STREAM("last_wp: " << last_wp);
+ROS_ERROR_STREAM("Substraction: " << sqrt(pow(eef_values.get_eef_position(eef_selected)(0) - last_wp.x,2) +
+                                          pow(eef_values.get_eef_position(eef_selected)(1) - last_wp.y,2) +
+                                          pow(eef_values.get_eef_position(eef_selected)(2) - last_wp.z,2)));
+
+    if ((sqrt(pow(eef_values.get_eef_position(eef_selected)(0) - last_wp.x,2) +
+              pow(eef_values.get_eef_position(eef_selected)(1) - last_wp.y,2) +
+              pow(eef_values.get_eef_position(eef_selected)(2) - last_wp.z,2))) < 0.05){
         ROS_ERROR_STREAM("Close to point: " <<
-                         (sqrt(pow(eef_values.get_eef_position(eef_selected)(0) - last_wp.x,2)) +
-                          sqrt(pow(eef_values.get_eef_position(eef_selected)(1) - last_wp.y,2)) +
-                          sqrt(pow(eef_values.get_eef_position(eef_selected)(2) - last_wp.z,2))));
+                         (sqrt(pow(eef_values.get_eef_position(eef_selected)(0) - last_wp.x,2) +
+                               pow(eef_values.get_eef_position(eef_selected)(1) - last_wp.y,2) +
+                               pow(eef_values.get_eef_position(eef_selected)(2) - last_wp.z,2)));
         return true;
-    }
+    }    
 
     geometry_msgs::Pose correct_orientation = eef_values.get_eef_pose(eef_selected);
     correct_orientation.orientation.w = 0.0;
-    correct_orientation.orientation.x = -0.0;
+    correct_orientation.orientation.x = 0.0;
     correct_orientation.orientation.y = 1;
     correct_orientation.orientation.z = 0.0;
 
@@ -613,7 +622,7 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
     int pitch_counter = 0, sign = 1;
     double step = 0.1;
     int trials = 0;
-    while(fraction < 0.90 && waypoints.size() > 3 && trials < 200){
+    while(fraction < 1.0 && waypoints.size() > 3 && trials < 200){
         ROS_WARN_STREAM("fraction is: " << fraction << " looking for orientations that will return complete path");
         pitch = pitch + step * pitch_counter;
         if (pitch > max_ang && sign > 0){

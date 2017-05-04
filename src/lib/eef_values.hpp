@@ -41,11 +41,11 @@ public:
 
     geometry_msgs::Pose& get_eef_pose(const std::string gripper){
         if(strcmp(gripper.c_str(), "left_gripper") == 0){
-            ROS_WARN("******************************* returning left gripper pose *****************************");
+//            ROS_WARN("******************************* returning left gripper pose *****************************");
             return eef_values.l_eef_pose;
         }
         else{
-            ROS_WARN("*************************** returning right gripper pose *******************************");
+//            ROS_WARN("*************************** returning right gripper pose *******************************");
             return eef_values.r_eef_pose;
         }
     }

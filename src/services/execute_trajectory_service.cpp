@@ -199,7 +199,7 @@ int main(int argc, char **argv)
 
     ros::ServiceServer service = n.advertiseService<
             baxter_kinematics::Trajectory::Request,
-            baxter_kinematics::Trajectory::Response>("baxter_kinematics/trajectory_motion", boost::bind(trajectory_execution, _1, _2, n,
+            baxter_kinematics::Trajectory::Response>("baxter_kinematics/execute_trajectory", boost::bind(trajectory_execution, _1, _2, n,
                                                                                                     boost::ref(ac_l),
                                                                                                     boost::ref(ac_r)));
     ROS_INFO("Ready to execute trajectory (set of delta motions).");

@@ -8,7 +8,7 @@
   <rosparam command="load" file="$(find baxter_kinematics)/src/parameters.yaml" />
 
   <!-- Simulation -->
-  <node name="get_sim_eef_pose_node" pkg="baxter_kinematics" type="get_sim_eef_pose_service" output="screen" args="joint_states:=/robot/joint_states"/>
+  <!--node name="get_sim_eef_pose_node" pkg="baxter_kinematics" type="get_sim_eef_pose_service" output="screen" args="joint_states:=/robot/joint_states"/-->
 
   <!-- Simulation and Real robot-->
   <node name="move_to_position_node" pkg="baxter_kinematics" type="move_to_position_service" output="screen" args="joint_states:=/robot/joint_states" />
