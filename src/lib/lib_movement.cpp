@@ -51,7 +51,9 @@ void jocommCallback_real(const sensor_msgs::JointState::ConstPtr& jo_state,
     right_arm_joint_values[4] = jo_state->position[13];
     right_arm_joint_values[5] = jo_state->position[14];
     right_arm_joint_values[6] = jo_state->position[15];
-}   
+}
+
+
 
 //return roll pitch yaw from the transformation matrix transform_l_ee_w
 Eigen::Vector3d extract_angles(Eigen::Matrix4d& transform_l_ee_w){
@@ -581,7 +583,7 @@ ROS_ERROR_STREAM("Substraction: " << sqrt(pow(eef_values.get_eef_position(eef_se
         ROS_ERROR_STREAM("Close to point: " <<
                          (sqrt(pow(eef_values.get_eef_position(eef_selected)(0) - last_wp.x,2) +
                                pow(eef_values.get_eef_position(eef_selected)(1) - last_wp.y,2) +
-                               pow(eef_values.get_eef_position(eef_selected)(2) - last_wp.z,2)));
+                               pow(eef_values.get_eef_position(eef_selected)(2) - last_wp.z,2))));
         return true;
     }    
 

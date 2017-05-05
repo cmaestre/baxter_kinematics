@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <launch>
 
-  <node name="joint_interface" pkg="baxter_interface" type="joint_trajectory_action_server.py" output="screen"/>
+  <!--node name="joint_interface" pkg="baxter_interface" type="joint_trajectory_action_server.py" output="screen"/>
   <include file="$(find baxter_kinematics)/launch/move_group_mimick_node.launch" />
-  <!--include file="$(find baxter_moveit_config)/launch/baxter_grippers.launch" /-->
+  <include file="$(find baxter_moveit_config)/launch/baxter_grippers.launch" /-->
 
   <rosparam command="load" file="$(find baxter_kinematics)/src/parameters.yaml" />
 

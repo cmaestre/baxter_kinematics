@@ -10,6 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   tf
   message_generation
+  baxter_core_msgs
 )
 
 #find_package(Eigen3 REQUIRED)
@@ -59,5 +60,14 @@ add_executable(restart_robot_service src/services/restart_robot_service.cpp ${al
 target_link_libraries(restart_robot_service ${catkin_LIBRARIES})
 
 ## Test files
+
+add_executable(test_planner src/tests/test_planner.cpp ${all_sources})
+target_link_libraries(test_planner ${catkin_LIBRARIES})
+
+add_executable(test_service src/tests/test_service.cpp ${all_sources})
+target_link_libraries(test_service ${catkin_LIBRARIES})
+
+add_executable(test_service_up_down src/tests/test_service_up_down.cpp ${all_sources})
+target_link_libraries(test_service_up_down ${catkin_LIBRARIES})
 
 
