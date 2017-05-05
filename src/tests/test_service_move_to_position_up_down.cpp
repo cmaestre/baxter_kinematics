@@ -21,7 +21,7 @@ void right_eef_Callback(baxter_core_msgs::EndpointState r_eef_feedback){
 int main(int argc, char** argv)
 {
     // Initialize ROS
-    ros::init(argc, argv, "test_planner_node");
+    ros::init(argc, argv, "test_service_move_to_position_up_down_node");
     ros::NodeHandle nh;
 
     ros::Subscriber sub_l_eef_msg = nh.subscribe<baxter_core_msgs::EndpointState>("/robot/limb/left/endpoint_state", 10, left_eef_Callback);

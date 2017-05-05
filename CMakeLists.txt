@@ -64,10 +64,11 @@ target_link_libraries(restart_robot_service ${catkin_LIBRARIES})
 add_executable(test_planner src/tests/test_planner.cpp ${all_sources})
 target_link_libraries(test_planner ${catkin_LIBRARIES})
 
-add_executable(test_service src/tests/test_service.cpp ${all_sources})
-target_link_libraries(test_service ${catkin_LIBRARIES})
+add_executable(test_service_move_to_position src/tests/test_service_move_to_position.cpp ${all_sources})
+target_link_libraries(test_service_move_to_position ${catkin_LIBRARIES})
 
-add_executable(test_service_up_down src/tests/test_service_up_down.cpp ${all_sources})
-target_link_libraries(test_service_up_down ${catkin_LIBRARIES})
+add_executable(test_service_move_to_position_up_down src/tests/test_service_move_to_position_up_down.cpp ${all_sources})
+target_link_libraries(test_service_move_to_position_up_down ${catkin_LIBRARIES})
 
-
+add_executable(test_service_restart_robot src/tests/test_service_restart_robot.cpp ${all_sources})
+target_link_libraries(test_service_restart_robot ${catkin_LIBRARIES})
