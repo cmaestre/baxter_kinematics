@@ -125,6 +125,10 @@ std::vector<geometry_msgs::Pose> compute_directed_waypoints(bool initialize_setu
                                                             std::vector<Eigen::Vector3d> predefined_wp_trajectory,
                                                             Kinematic_values eef_values);
 
+//get rid of repeqted waypoints in a trajectory
+void optimize_trajectory(std::vector<geometry_msgs::Pose>& vector_to_optimize,
+                         double min_wp_dist);
+
 /**
  * @brief Plan and execute waypoint trajectory
  * @param b

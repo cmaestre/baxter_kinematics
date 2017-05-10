@@ -59,6 +59,7 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
     robot_model::RobotModelPtr robot_model = robot_model_loader.getModel();
     robot_state::RobotState robot_state(robot_model);
 
+    // set arm
     std::string left_arm = "left_arm";
     std::string right_arm = "right_arm";
     if(strcmp(req.eef_name.c_str(), "left") == 0)
@@ -70,9 +71,9 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
         return false;
     }
 
-    std::vector<std::string> left_joint_names = {"left_s0", "left_s1", "left_e0", "left_e1", "left_w0", "left_w1", "left_w2"};
-    std::vector<std::string> right_joint_names = {"right_s0", "right_s1", "right_e0", "right_e1", "right_w0", "right_w1", "right_w2"};
     // get current position
+    std::vector<std::string> left_joint_names = {"left_s0", "left_s1", "left_e0", "left_e1", "left_w0", "left_w1", "left_w2"};
+    std::vector<std::string> right_joint_names = {"right_s0", "right_s1", "right_e0", "right_e1", "right_w0", "right_w1", "right_w2"};    
     if(!real_robot)
         if(strcmp(req.eef_name.c_str(), "left") == 0)
             robot_state.setVariablePositions(left_joint_names, left_arm_joint_values);
@@ -85,7 +86,7 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
     else
         robot_state.setVariablePositions(all_joint_names, all_joint_values);
 
-    // get trajectory
+    // get initial pose orientation
     std::string gripper;
     if(strcmp(req.eef_name.c_str(), "left") == 0)
         gripper = "left_gripper";
@@ -98,8 +99,8 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
     geometry_msgs::Pose start_pose = eef_values.get_eef_pose(gripper);
     ROS_ERROR_STREAM("eef orientation is: " << start_pose);
 
-    std::vector<double> received_traj_vector = req.trajectory;
-    int feedback_frequency = 1;
+    // get trajectory
+    std::vector<double> received_traj_vector = req.trajectory;    
     std::vector<geometry_msgs::Pose> waypoints;
     for (std::size_t i=0; i<received_traj_vector.size(); i=i+3){
         start_pose.position.x = received_traj_vector[i];
@@ -109,6 +110,14 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
         ROS_ERROR_STREAM(start_pose.position.x << " " << start_pose.position.y << " " << start_pose.position.z);
     }
 
+    // remove almost similar wps
+    ROS_ERROR_STREAM("nb waypoints before optimization is " << waypoints.size());
+    double min_wp_dist;
+    nh.getParam("min_wp_distance", min_wp_dist);
+    optimize_trajectory(waypoints, min_wp_dist);
+    ROS_ERROR_STREAM("nb waypoints after optimization is " << waypoints.size());
+
+    // match joints
     if(!real_robot)
         if(strcmp(req.eef_name.c_str(), "left") == 0)
             robot_state.setVariablePositions(left_joint_names, left_arm_joint_values);
@@ -121,6 +130,7 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
     else
         robot_state.setVariablePositions(all_joint_names, all_joint_values);
 
+    // move arms
     std::vector<Eigen::Vector3d> eef_position_vector;
     std::vector<Eigen::Vector3d> eef_orientation_vector;
     std::vector<Eigen::Vector3d> object_position_vector;
@@ -130,6 +140,7 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
     object_position_vector.clear();
     object_orientation_vector.clear();
     int traj_res;
+    int feedback_frequency = 1;
     if(strcmp(req.eef_name.c_str(), "left") == 0)
         traj_res = plan_and_execute_waypoint_traj("left",
                                                   waypoints,
@@ -142,7 +153,7 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
                                                   object_orientation_vector,
                                                   eef_values,
                                                   nh,
-                                                  true, //feedback data
+                                                  req.feedback,
                                                   true, //publish topic
                                                   feedback_frequency,
                                                   traj_res_pub);
@@ -158,7 +169,7 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
                                                   object_orientation_vector,
                                                   eef_values,
                                                   nh,
-                                                  true, //feedback data
+                                                  req.feedback,
                                                   true, //publish topic
                                                   feedback_frequency,
                                                   traj_res_pub);

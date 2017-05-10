@@ -521,6 +521,34 @@ std::vector<geometry_msgs::Pose> compute_directed_waypoints(bool initialize_setu
     return waypoints;
 }
 
+//get rid of repeqted waypoints in a trajectory
+void optimize_trajectory(std::vector<geometry_msgs::Pose>& vector_to_optimize,
+                         double min_wp_dist){
+
+    std::vector<geometry_msgs::Pose> updated_vector;
+
+    int var = 0;
+    for(unsigned i = 0; i < vector_to_optimize.size(); i += var) {
+
+        geometry_msgs::Pose curr_pose = vector_to_optimize[i];
+        std::vector<double> current_wp = {curr_pose.position.x,
+                                         curr_pose.position.y,
+                                         curr_pose.position.z};
+
+        for(unsigned j = i+1; j < vector_to_optimize.size(); j++) {
+            var = j - i;
+            geometry_msgs::Pose next_pose = vector_to_optimize[j];
+            std::vector<double> next_wp = {next_pose.position.x,
+                                           next_pose.position.y,
+                                           next_pose.position.z};
+            if(largest_difference(current_wp, next_wp) >= min_wp_dist) {
+                updated_vector.push_back(curr_pose);
+                break;
+            }
+        }
+    }
+    vector_to_optimize = updated_vector;
+}
 
 /**
  * @brief Plan and execute waypoint trajectory
@@ -568,14 +596,6 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
 
     //check if already close to position to move
     geometry_msgs::Point last_wp = waypoints[waypoints.size()-1].position;
-ROS_ERROR_STREAM("eef_values: " <<
-                 eef_values.get_eef_position(eef_selected)(0) << " " <<
-                 eef_values.get_eef_position(eef_selected)(1) << " " <<
-                 eef_values.get_eef_position(eef_selected)(2));
-ROS_ERROR_STREAM("last_wp: " << last_wp);
-ROS_ERROR_STREAM("Substraction: " << sqrt(pow(eef_values.get_eef_position(eef_selected)(0) - last_wp.x,2) +
-                                          pow(eef_values.get_eef_position(eef_selected)(1) - last_wp.y,2) +
-                                          pow(eef_values.get_eef_position(eef_selected)(2) - last_wp.z,2)));
 
     if ((sqrt(pow(eef_values.get_eef_position(eef_selected)(0) - last_wp.x,2) +
               pow(eef_values.get_eef_position(eef_selected)(1) - last_wp.y,2) +
@@ -733,55 +753,55 @@ ROS_ERROR_STREAM("Substraction: " << sqrt(pow(eef_values.get_eef_position(eef_se
         }
     }
 
-//    // publish the remaining wp of the trajectory
-//    if (publish_topic && (real_traj_to_publish.data.size() > 0)) {
-//        ROS_ERROR_STREAM("Final printing in topic");
-//        traj_res_pub.publish(real_traj_to_publish);
-//    }
+    if(feedback_data){
 
-    // add last eef values
-    eef_pose = eef_values.get_eef_position(eef_selected);
-    eef_position_vector.push_back(eef_pose);
-    eef_orientation_vector.push_back(eef_values.get_eef_rpy_orientation(eef_selected));
+    //    // publish the remaining wp of the trajectory
+    //    if (publish_topic && (real_traj_to_publish.data.size() > 0)) {
+    //        ROS_ERROR_STREAM("Final printing in topic");
+    //        traj_res_pub.publish(real_traj_to_publish);
+    //    }
 
-//    //add last object values
-//    getObjectStateSrv.request.object_name = object_name;
-//    client_get_object_pose.call(getObjectStateSrv);
-//    std::vector<double> object_state_vector = getObjectStateSrv.response.object_state;
+        // add last eef values
+        eef_pose = eef_values.get_eef_position(eef_selected);
+        eef_position_vector.push_back(eef_pose);
+        eef_orientation_vector.push_back(eef_values.get_eef_rpy_orientation(eef_selected));
 
-//    Eigen::Vector3d current_object_position;
-//    current_object_position <<  object_state_vector[0],
-//                                object_state_vector[1],
-//                                object_state_vector[2];
-//    object_position_vector.push_back(current_object_position);
+    //    //add last object values
+    //    getObjectStateSrv.request.object_name = object_name;
+    //    client_get_object_pose.call(getObjectStateSrv);
+    //    std::vector<double> object_state_vector = getObjectStateSrv.response.object_state;
 
-//    Eigen::Vector3d current_object_orientation;
-//    current_object_orientation << object_state_vector[3],
-//                                  object_state_vector[4],
-//                                  object_state_vector[5];
-//    object_orientation_vector.push_back(current_object_orientation);
+    //    Eigen::Vector3d current_object_position;
+    //    current_object_position <<  object_state_vector[0],
+    //                                object_state_vector[1],
+    //                                object_state_vector[2];
+    //    object_position_vector.push_back(current_object_position);
 
-    //store to publish
-    real_traj_to_publish.data.push_back(eef_pose(0));
-    real_traj_to_publish.data.push_back(eef_pose(1));
-    real_traj_to_publish.data.push_back(eef_pose(2));
-//    real_traj_to_publish.data.push_back(object_state_vector[0]);
-//    real_traj_to_publish.data.push_back(object_state_vector[1]);
-//    real_traj_to_publish.data.push_back(object_state_vector[2]);
+    //    Eigen::Vector3d current_object_orientation;
+    //    current_object_orientation << object_state_vector[3],
+    //                                  object_state_vector[4],
+    //                                  object_state_vector[5];
+    //    object_orientation_vector.push_back(current_object_orientation);
 
-//    // publish full trajectory
-//    if (publish_topic && (real_traj_to_publish.data.size() > 0)) {
-//        ROS_ERROR_STREAM("Printing full traj in topic");
-//        traj_res_pub.publish(real_traj_to_publish);
-//    }
-    // publish the remaining wp of the trajectory
-    if (publish_topic && (real_traj_to_publish.data.size() > 0)) {
-        ROS_ERROR_STREAM("Final printing in topic");
-        traj_res_pub.publish(real_traj_to_publish);
+        //store to publish
+        real_traj_to_publish.data.push_back(eef_pose(0));
+        real_traj_to_publish.data.push_back(eef_pose(1));
+        real_traj_to_publish.data.push_back(eef_pose(2));
+    //    real_traj_to_publish.data.push_back(object_state_vector[0]);
+    //    real_traj_to_publish.data.push_back(object_state_vector[1]);
+    //    real_traj_to_publish.data.push_back(object_state_vector[2]);
+
+    //    // publish full trajectory
+    //    if (publish_topic && (real_traj_to_publish.data.size() > 0)) {
+    //        ROS_ERROR_STREAM("Printing full traj in topic");
+    //        traj_res_pub.publish(real_traj_to_publish);
+    //    }
+        // publish the remaining wp of the trajectory
+        if (real_traj_to_publish.data.size() > 0)
+            ROS_ERROR_STREAM("Final printing in topic");
+
+        ROS_ERROR_STREAM("Number of saved coordinates is: " << count);
     }
-
-    if(feedback_data)
-        ROS_ERROR_STREAM("number of saved coordinates is: " << count);
     return 1;
 }
 

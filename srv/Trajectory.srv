@@ -1,4 +1,5 @@
 string eef_name
 float64[] trajectory
+bool feedback
 ---
 bool success
