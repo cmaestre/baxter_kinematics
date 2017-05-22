@@ -126,7 +126,7 @@ std::vector<geometry_msgs::Pose> compute_directed_waypoints(bool initialize_setu
                                                             Kinematic_values eef_values);
 
 //get rid of repeqted waypoints in a trajectory
-void optimize_trajectory(std::vector<geometry_msgs::Pose>& vector_to_optimize,
+bool optimize_trajectory(std::vector<geometry_msgs::Pose>& vector_to_optimize,
                          double min_wp_dist);
 
 /**

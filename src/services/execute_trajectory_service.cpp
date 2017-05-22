@@ -54,133 +54,135 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
     ros::AsyncSpinner spinner (1);
     spinner.start();
 
-    ROS_INFO("Load robot description");
-    robot_model_loader::RobotModelLoader robot_model_loader("robot_description");
-    robot_model::RobotModelPtr robot_model = robot_model_loader.getModel();
-    robot_state::RobotState robot_state(robot_model);
+    int curr_iter = 0;
+    bool found = false;
+    while (!found and curr_iter < 5){
+        ROS_INFO("Load robot description");
+        robot_model_loader::RobotModelLoader robot_model_loader("robot_description");
+        robot_model::RobotModelPtr robot_model = robot_model_loader.getModel();
+        robot_state::RobotState robot_state(robot_model);
 
-    // set arm
-    std::string left_arm = "left_arm";
-    std::string right_arm = "right_arm";
-    if(strcmp(req.eef_name.c_str(), "left") == 0)
-        eef_values.set_baxter_arm(left_arm);
-    else if(strcmp(req.eef_name.c_str(), "right") == 0)
-        eef_values.set_baxter_arm(right_arm);
-    else{
-        ROS_ERROR("please specify in service request, left or right arm");
-        return false;
-    }
-
-    // get current position
-    std::vector<std::string> left_joint_names = {"left_s0", "left_s1", "left_e0", "left_e1", "left_w0", "left_w1", "left_w2"};
-    std::vector<std::string> right_joint_names = {"right_s0", "right_s1", "right_e0", "right_e1", "right_w0", "right_w1", "right_w2"};    
-    if(!real_robot)
+        // set arm
+        std::string left_arm = "left_arm";
+        std::string right_arm = "right_arm";
         if(strcmp(req.eef_name.c_str(), "left") == 0)
-            robot_state.setVariablePositions(left_joint_names, left_arm_joint_values);
+            eef_values.set_baxter_arm(left_arm);
         else if(strcmp(req.eef_name.c_str(), "right") == 0)
-            robot_state.setVariablePositions(right_joint_names, right_arm_joint_values);
+            eef_values.set_baxter_arm(right_arm);
         else{
             ROS_ERROR("please specify in service request, left or right arm");
             return false;
         }
-    else
-        robot_state.setVariablePositions(all_joint_names, all_joint_values);
 
-    // get initial pose orientation
-    std::string gripper;
-    if(strcmp(req.eef_name.c_str(), "left") == 0)
-        gripper = "left_gripper";
-    else if(strcmp(req.eef_name.c_str(), "right") == 0)
-        gripper = "right_gripper";
-    else{
-        ROS_ERROR("please specify in service request, left or right arm");
-        return false;
-    }
-    geometry_msgs::Pose start_pose = eef_values.get_eef_pose(gripper);
-    ROS_ERROR_STREAM("eef orientation is: " << start_pose);
+        // get current position
+        std::vector<std::string> left_joint_names = {"left_s0", "left_s1", "left_e0", "left_e1", "left_w0", "left_w1", "left_w2"};
+        std::vector<std::string> right_joint_names = {"right_s0", "right_s1", "right_e0", "right_e1", "right_w0", "right_w1", "right_w2"};
+        if(!real_robot)
+            if(strcmp(req.eef_name.c_str(), "left") == 0)
+                robot_state.setVariablePositions(left_joint_names, left_arm_joint_values);
+            else if(strcmp(req.eef_name.c_str(), "right") == 0)
+                robot_state.setVariablePositions(right_joint_names, right_arm_joint_values);
+            else{
+                ROS_ERROR("please specify in service request, left or right arm");
+                return false;
+            }
+        else
+            robot_state.setVariablePositions(all_joint_names, all_joint_values);
 
-    // get trajectory
-    std::vector<double> received_traj_vector = req.trajectory;    
-    std::vector<geometry_msgs::Pose> waypoints;
-    for (std::size_t i=0; i<received_traj_vector.size(); i=i+3){
-        start_pose.position.x = received_traj_vector[i];
-        start_pose.position.y = received_traj_vector[i+1];
-        start_pose.position.z = received_traj_vector[i+2];
-        waypoints.push_back(start_pose);
-        ROS_ERROR_STREAM(start_pose.position.x << " " << start_pose.position.y << " " << start_pose.position.z);
-    }
-
-    // remove almost similar wps
-    ROS_ERROR_STREAM("nb waypoints before optimization is " << waypoints.size());
-    double min_wp_dist;
-    nh.getParam("min_wp_distance", min_wp_dist);
-    optimize_trajectory(waypoints, min_wp_dist);
-    ROS_ERROR_STREAM("nb waypoints after optimization is " << waypoints.size());
-
-    // match joints
-    if(!real_robot)
+        // get initial pose orientation
+        std::string gripper;
         if(strcmp(req.eef_name.c_str(), "left") == 0)
-            robot_state.setVariablePositions(left_joint_names, left_arm_joint_values);
+            gripper = "left_gripper";
         else if(strcmp(req.eef_name.c_str(), "right") == 0)
-            robot_state.setVariablePositions(right_joint_names, right_arm_joint_values);
+            gripper = "right_gripper";
         else{
             ROS_ERROR("please specify in service request, left or right arm");
             return false;
         }
-    else
-        robot_state.setVariablePositions(all_joint_names, all_joint_values);
+        geometry_msgs::Pose start_pose = eef_values.get_eef_pose(gripper);
+        ROS_ERROR_STREAM("eef orientation is: " << start_pose);
 
-    // move arms
-    std::vector<Eigen::Vector3d> eef_position_vector;
-    std::vector<Eigen::Vector3d> eef_orientation_vector;
-    std::vector<Eigen::Vector3d> object_position_vector;
-    std::vector<Eigen::Vector3d> object_orientation_vector;
-    eef_position_vector.clear();
-    eef_orientation_vector.clear();
-    object_position_vector.clear();
-    object_orientation_vector.clear();
-    int traj_res;
-    int feedback_frequency = 1;
-    if(strcmp(req.eef_name.c_str(), "left") == 0)
-        traj_res = plan_and_execute_waypoint_traj("left",
-                                                  waypoints,
-                                                  robot_state,
-                                                  ac_left,
-                                                  "cube", //for feedback
-                                                  eef_position_vector,
-                                                  eef_orientation_vector,
-                                                  object_position_vector,
-                                                  object_orientation_vector,
-                                                  eef_values,
-                                                  nh,
-                                                  req.feedback,
-                                                  true, //publish topic
-                                                  feedback_frequency,
-                                                  traj_res_pub);
-    else if(strcmp(req.eef_name.c_str(), "right") == 0)
-        traj_res = plan_and_execute_waypoint_traj("right",
-                                                  waypoints,
-                                                  robot_state,
-                                                  ac_right,
-                                                  "cube", //for feedback
-                                                  eef_position_vector,
-                                                  eef_orientation_vector,
-                                                  object_position_vector,
-                                                  object_orientation_vector,
-                                                  eef_values,
-                                                  nh,
-                                                  req.feedback,
-                                                  true, //publish topic
-                                                  feedback_frequency,
-                                                  traj_res_pub);
-    else{
-        ROS_ERROR("please specify in service request, left or right arm");
-        return false;
+        // get trajectory
+        std::vector<double> received_traj_vector = req.trajectory;
+        std::vector<geometry_msgs::Pose> waypoints;
+        for (std::size_t i=0; i<received_traj_vector.size(); i=i+3){
+            start_pose.position.x = received_traj_vector[i];
+            start_pose.position.y = received_traj_vector[i+1];
+            start_pose.position.z = received_traj_vector[i+2];
+            waypoints.push_back(start_pose);
+            ROS_ERROR_STREAM(start_pose.position.x << " " << start_pose.position.y << " " << start_pose.position.z);
+        }
+
+        // match joints
+        if(!real_robot)
+            if(strcmp(req.eef_name.c_str(), "left") == 0)
+                robot_state.setVariablePositions(left_joint_names, left_arm_joint_values);
+            else if(strcmp(req.eef_name.c_str(), "right") == 0)
+                robot_state.setVariablePositions(right_joint_names, right_arm_joint_values);
+            else{
+                ROS_ERROR("please specify in service request, left or right arm");
+                return false;
+            }
+        else
+            robot_state.setVariablePositions(all_joint_names, all_joint_values);
+
+        // move arms
+        std::vector<Eigen::Vector3d> eef_position_vector;
+        std::vector<Eigen::Vector3d> eef_orientation_vector;
+        std::vector<Eigen::Vector3d> object_position_vector;
+        std::vector<Eigen::Vector3d> object_orientation_vector;
+        eef_position_vector.clear();
+        eef_orientation_vector.clear();
+        object_position_vector.clear();
+        object_orientation_vector.clear();
+        int traj_res;
+        int feedback_frequency = 1;
+        if(strcmp(req.eef_name.c_str(), "left") == 0)
+            traj_res = plan_and_execute_waypoint_traj("left",
+                                                      waypoints,
+                                                      robot_state,
+                                                      ac_left,
+                                                      "cube", //for feedback
+                                                      eef_position_vector,
+                                                      eef_orientation_vector,
+                                                      object_position_vector,
+                                                      object_orientation_vector,
+                                                      eef_values,
+                                                      nh,
+                                                      req.feedback,
+                                                      true, //publish topic
+                                                      feedback_frequency,
+                                                      traj_res_pub);
+        else if(strcmp(req.eef_name.c_str(), "right") == 0)
+            traj_res = plan_and_execute_waypoint_traj("right",
+                                                      waypoints,
+                                                      robot_state,
+                                                      ac_right,
+                                                      "cube", //for feedback
+                                                      eef_position_vector,
+                                                      eef_orientation_vector,
+                                                      object_position_vector,
+                                                      object_orientation_vector,
+                                                      eef_values,
+                                                      nh,
+                                                      req.feedback,
+                                                      true, //publish topic
+                                                      feedback_frequency,
+                                                      traj_res_pub);
+        else{
+            ROS_ERROR("please specify in service request, left or right arm");
+            return false;
+        }
+        if (curr_iter == 3 or traj_res == 0)
+            res.success = false;
+        else if (traj_res == 1){
+            res.success = true;
+            found = true;
+        }
+        else if (traj_res == 2)
+            ROS_ERROR_STREAM("plan_and_execute_waypoint_traj - try: " << curr_iter);
+        curr_iter++;
     }
-    if (traj_res == 1)
-        res.success = true;
-    else // 0 or 2
-        res.success = false;
 
     //    //make sure the end effector is at desired position
     //    f_trans_mat = robot_state.getGlobalLinkTransform("left_gripper");

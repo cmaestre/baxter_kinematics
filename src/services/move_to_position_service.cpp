@@ -52,129 +52,144 @@ bool move_to_pos(baxter_kinematics::MoveToPos::Request &req,
     ros::AsyncSpinner spinner (1);
     spinner.start();
 
-    ROS_INFO("Load robot description");
-    robot_model_loader::RobotModelLoader robot_model_loader("robot_description");
-    robot_model::RobotModelPtr robot_model = robot_model_loader.getModel();
-    robot_state::RobotState robot_state(robot_model);
+    int curr_iter = 0;
+    bool found = false;
+    while (!found and curr_iter < 5){
 
-    std::string left_arm = "left_arm";
-    std::string right_arm = "right_arm";
-    if(strcmp(req.eef_name.c_str(), "left") == 0)
-        eef_values.set_baxter_arm(left_arm);
-    else if(strcmp(req.eef_name.c_str(), "right") == 0)
-        eef_values.set_baxter_arm(right_arm);
-    else{
-        ROS_ERROR("please specify in service request, left or right arm");
-        return false;
-    }
+        ROS_INFO("Load robot description");
+        robot_model_loader::RobotModelLoader robot_model_loader("robot_description");
+        robot_model::RobotModelPtr robot_model = robot_model_loader.getModel();
+        robot_state::RobotState robot_state(robot_model);
 
-//    //make sure that requested initial position is within available positions
-//    if(req.initial_position_number > eef_values.get_nb_init_pos()){
-//        ROS_ERROR("INVALID INITIAL POSITION NUMBER, Please enter a number less or equal to : %f", eef_values.get_nb_init_pos());
-//        res.success = false;
-//        return false;
-//    }
-//
-//    //computing demanded init_pos
-//    Eigen::Vector3d init_pos;
-//    std::vector<Eigen::Vector3d> mid_point_position_vector(4);
-//    geometry_msgs::Pose object_pose = eef_values.get_model_pose("cube");
-//    double current_angle = req.initial_position_number * (2 * M_PI / eef_values.get_nb_init_pos());
-//    eef_values.set_left_pos_x(object_pose.position.x + eef_values.get_radius() * cos(current_angle));
-//    eef_values.set_left_pos_y(object_pose.position.y + eef_values.get_radius() * sin(current_angle));
-//    init_pos << eef_values.get_left_pos_x(),
-//                eef_values.get_left_pos_y(),
-//                eef_values.get_left_pos_z();
-
-    // Get init pos
-    std::vector<Eigen::Vector3d> mid_point_position_vector(4);
-    Eigen::Vector3d init_pos;
-    init_pos << req.x,
-                req.y,
-                req.z;
-
-    std::string temp_side = "no_side"; //eef_values.get_cube_side_value(4); //NO_SIDE
-    std::vector<Eigen::Vector3d> dummy;
-
-    // get current position
-    std::vector<std::string> left_joint_names = {"left_s0", "left_s1", "left_e0", "left_e1", "left_w0", "left_w1", "left_w2"};
-    std::vector<std::string> right_joint_names = {"right_s0", "right_s1", "right_e0", "right_e1", "right_w0", "right_w1", "right_w2"};
-    if(!real_robot)
+        std::string left_arm = "left_arm";
+        std::string right_arm = "right_arm";
         if(strcmp(req.eef_name.c_str(), "left") == 0)
-            robot_state.setVariablePositions(left_joint_names, left_arm_joint_values);
+            eef_values.set_baxter_arm(left_arm);
         else if(strcmp(req.eef_name.c_str(), "right") == 0)
-            robot_state.setVariablePositions(right_joint_names, right_arm_joint_values);
+            eef_values.set_baxter_arm(right_arm);
         else{
             ROS_ERROR("please specify in service request, left or right arm");
             return false;
         }
-    else
-        robot_state.setVariablePositions(all_joint_names, all_joint_values);
 
-    std::vector<geometry_msgs::Pose> waypoints =
-        compute_directed_waypoints(true,
-                                   robot_state,
-                                   init_pos, // goal
-                                   temp_side,
-                                   mid_point_position_vector,
-                                   eef_values);
+    //    //make sure that requested initial position is within available positions
+    //    if(req.initial_position_number > eef_values.get_nb_init_pos()){
+    //        ROS_ERROR("INVALID INITIAL POSITION NUMBER, Please enter a number less or equal to : %f", eef_values.get_nb_init_pos());
+    //        res.success = false;
+    //        return false;
+    //    }
+    //
+    //    //computing demanded init_pos
+    //    Eigen::Vector3d init_pos;
+    //    std::vector<Eigen::Vector3d> mid_point_position_vector(4);
+    //    geometry_msgs::Pose object_pose = eef_values.get_model_pose("cube");
+    //    double current_angle = req.initial_position_number * (2 * M_PI / eef_values.get_nb_init_pos());
+    //    eef_values.set_left_pos_x(object_pose.position.x + eef_values.get_radius() * cos(current_angle));
+    //    eef_values.set_left_pos_y(object_pose.position.y + eef_values.get_radius() * sin(current_angle));
+    //    init_pos << eef_values.get_left_pos_x(),
+    //                eef_values.get_left_pos_y(),
+    //                eef_values.get_left_pos_z();
 
-    if(strcmp(req.eef_name.c_str(), "left") == 0)
-        plan_and_execute_waypoint_traj("left",
-                                       waypoints,
+        // Get init pos
+        std::vector<Eigen::Vector3d> mid_point_position_vector(4);
+        Eigen::Vector3d init_pos;
+        init_pos << req.x,
+                    req.y,
+                    req.z;
+
+        std::string temp_side = "no_side"; //eef_values.get_cube_side_value(4); //NO_SIDE
+        std::vector<Eigen::Vector3d> dummy;
+
+        // get current position
+        std::vector<std::string> left_joint_names = {"left_s0", "left_s1", "left_e0", "left_e1", "left_w0", "left_w1", "left_w2"};
+        std::vector<std::string> right_joint_names = {"right_s0", "right_s1", "right_e0", "right_e1", "right_w0", "right_w1", "right_w2"};
+        if(!real_robot)
+            if(strcmp(req.eef_name.c_str(), "left") == 0)
+                robot_state.setVariablePositions(left_joint_names, left_arm_joint_values);
+            else if(strcmp(req.eef_name.c_str(), "right") == 0)
+                robot_state.setVariablePositions(right_joint_names, right_arm_joint_values);
+            else{
+                ROS_ERROR("please specify in service request, left or right arm");
+                return false;
+            }
+        else
+            robot_state.setVariablePositions(all_joint_names, all_joint_values);
+
+        std::vector<geometry_msgs::Pose> waypoints =
+            compute_directed_waypoints(true,
                                        robot_state,
-                                       ac_left,
-                                       "cube",
-                                       dummy,
-                                       dummy,
-                                       dummy,
-                                       dummy,
-                                       eef_values,
-                                       nh);
-    else if(strcmp(req.eef_name.c_str(), "right") == 0)
-        plan_and_execute_waypoint_traj("right",
-                                       waypoints,
-                                       robot_state,
-                                       ac_right,
-                                       "cube",
-                                       dummy,
-                                       dummy,
-                                       dummy,
-                                       dummy,
-                                       eef_values,
-                                       nh);
+                                       init_pos, // goal
+                                       temp_side,
+                                       mid_point_position_vector,
+                                       eef_values);
 
-    //make sure the end effector is at desired initial position
-    // get current position
-    if(!real_robot)
+        int traj_res;
         if(strcmp(req.eef_name.c_str(), "left") == 0)
-            robot_state.setVariablePositions(left_joint_names, left_arm_joint_values);
+            traj_res = plan_and_execute_waypoint_traj("left",
+                                           waypoints,
+                                           robot_state,
+                                           ac_left,
+                                           "cube",
+                                           dummy,
+                                           dummy,
+                                           dummy,
+                                           dummy,
+                                           eef_values,
+                                           nh);
         else if(strcmp(req.eef_name.c_str(), "right") == 0)
-            robot_state.setVariablePositions(right_joint_names, right_arm_joint_values);
-        else{
-            ROS_ERROR("please specify in service request, left or right arm");
-            return false;
+            traj_res = plan_and_execute_waypoint_traj("right",
+                                           waypoints,
+                                           robot_state,
+                                           ac_right,
+                                           "cube",
+                                           dummy,
+                                           dummy,
+                                           dummy,
+                                           dummy,
+                                           eef_values,
+                                           nh);
+//        //make sure the end effector is at desired initial position
+//        // get current position
+//        if(!real_robot)
+//            if(strcmp(req.eef_name.c_str(), "left") == 0)
+//                robot_state.setVariablePositions(left_joint_names, left_arm_joint_values);
+//            else if(strcmp(req.eef_name.c_str(), "right") == 0)
+//                robot_state.setVariablePositions(right_joint_names, right_arm_joint_values);
+//            else{
+//                ROS_ERROR("please specify in service request, left or right arm");
+//                return false;
+//            }
+//        else
+//            robot_state.setVariablePositions(all_joint_names, all_joint_values);
+
+//        Eigen::Affine3d f_trans_mat;
+//        if(strcmp(req.eef_name.c_str(), "left") == 0)
+//            f_trans_mat = robot_state.getGlobalLinkTransform("left_gripper");
+//        else if(strcmp(req.eef_name.c_str(), "right") == 0)
+//            f_trans_mat = robot_state.getGlobalLinkTransform("right_gripper");
+//        else{
+//            ROS_ERROR("please specify in service request, left or right arm");
+//            return false;
+//        }
+
+//        if((init_pos - f_trans_mat.translation()).norm() < 0.025){
+//            ROS_INFO_STREAM("SUCCESSFUL INIT MOTION : " << (init_pos - f_trans_mat.translation()).norm());
+//            res.success = true;
+//        }
+//        else{
+//            ROS_ERROR_STREAM("FAILED INIT MOTION : " << (init_pos - f_trans_mat.translation()).norm());
+//            res.success = false;
+//        }
+
+        if (curr_iter == 3 or traj_res == 0)
+            res.success = false;
+        else if (traj_res == 1){
+            res.success = true;
+            found = true;
         }
-    else
-        robot_state.setVariablePositions(all_joint_names, all_joint_values);
-
-    Eigen::Affine3d f_trans_mat;
-    if(strcmp(req.eef_name.c_str(), "left") == 0)
-        f_trans_mat = robot_state.getGlobalLinkTransform("left_gripper");
-    else if(strcmp(req.eef_name.c_str(), "right") == 0)
-        f_trans_mat = robot_state.getGlobalLinkTransform("right_gripper");
-    else{
-        ROS_ERROR("please specify in service request, left or right arm");
-        return false;
-    }
-
-    if((init_pos - f_trans_mat.translation()).norm() < 0.025){
-        ROS_INFO_STREAM("SUCCESSFUL INIT MOTION : " << (init_pos - f_trans_mat.translation()).norm());
-        res.success = true;
-    }
-    else{
-        ROS_ERROR_STREAM("FAILED INIT MOTION : " << (init_pos - f_trans_mat.translation()).norm());
-        res.success = false;
+        else if (traj_res == 2)
+            ROS_ERROR_STREAM("plan_and_execute_waypoint_traj - try: " << curr_iter);
+        curr_iter++;
     }
 
     // Wait till user kills the process (Control-C)

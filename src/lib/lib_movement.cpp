@@ -522,32 +522,41 @@ std::vector<geometry_msgs::Pose> compute_directed_waypoints(bool initialize_setu
 }
 
 //get rid of repeqted waypoints in a trajectory
-void optimize_trajectory(std::vector<geometry_msgs::Pose>& vector_to_optimize,
+bool optimize_trajectory(std::vector<geometry_msgs::Pose>& vector_to_optimize,
                          double min_wp_dist){
 
     std::vector<geometry_msgs::Pose> updated_vector;
 
-    int var = 0;
-    for(unsigned i = 0; i < vector_to_optimize.size(); i += var) {
-
-        geometry_msgs::Pose curr_pose = vector_to_optimize[i];
+    int pos = 0;
+    while (pos < vector_to_optimize.size()-1){
+        geometry_msgs::Pose curr_pose = vector_to_optimize[pos];
+        updated_vector.push_back(curr_pose);
         std::vector<double> current_wp = {curr_pose.position.x,
                                          curr_pose.position.y,
                                          curr_pose.position.z};
-
-        for(unsigned j = i+1; j < vector_to_optimize.size(); j++) {
-            var = j - i;
-            geometry_msgs::Pose next_pose = vector_to_optimize[j];
+        bool far_found = false;
+        int tmp_pos = pos + 1;
+//        ROS_ERROR_STREAM(pos << " " << tmp_pos);
+        while (!far_found && (tmp_pos < vector_to_optimize.size())){
+            geometry_msgs::Pose next_pose = vector_to_optimize[tmp_pos];
             std::vector<double> next_wp = {next_pose.position.x,
                                            next_pose.position.y,
                                            next_pose.position.z};
             if(largest_difference(current_wp, next_wp) >= min_wp_dist) {
-                updated_vector.push_back(curr_pose);
-                break;
+                far_found = true;
+            } else {
+                tmp_pos++;
             }
+            pos = tmp_pos;
         }
     }
+    updated_vector.push_back(vector_to_optimize.back());
     vector_to_optimize = updated_vector;
+
+    if (vector_to_optimize.size() == 1)
+        return false;
+    else
+        return true;
 }
 
 /**
@@ -571,6 +580,15 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
                                     int feedback_frequency,
                                     ros::Publisher traj_res_pub){
 
+    // remove almost similar wps
+    ROS_ERROR_STREAM("nb waypoints before optimization is " << waypoints.size());
+    double min_wp_dist;
+    nh.getParam("min_wp_distance", min_wp_dist);
+    if (!optimize_trajectory(waypoints, min_wp_dist)){
+        ROS_ERROR_STREAM("waypoints too close! No execution.");
+        return true;
+    }
+    ROS_ERROR_STREAM("nb waypoints after optimization is " << waypoints.size());
 
     //the move group to move the selected arm to interact with the object as well as to derive it back home
     std::string arm_selected, eef_selected;
@@ -594,19 +612,6 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
     pitch = eef_values.get_eef_rpy_orientation(eef_selected)(1);
     yaw = eef_values.get_eef_rpy_orientation(eef_selected)(2);
 
-    //check if already close to position to move
-    geometry_msgs::Point last_wp = waypoints[waypoints.size()-1].position;
-
-    if ((sqrt(pow(eef_values.get_eef_position(eef_selected)(0) - last_wp.x,2) +
-              pow(eef_values.get_eef_position(eef_selected)(1) - last_wp.y,2) +
-              pow(eef_values.get_eef_position(eef_selected)(2) - last_wp.z,2))) < 0.05){
-        ROS_ERROR_STREAM("Close to point: " <<
-                         (sqrt(pow(eef_values.get_eef_position(eef_selected)(0) - last_wp.x,2) +
-                               pow(eef_values.get_eef_position(eef_selected)(1) - last_wp.y,2) +
-                               pow(eef_values.get_eef_position(eef_selected)(2) - last_wp.z,2))));
-        return true;
-    }    
-
     geometry_msgs::Pose correct_orientation = eef_values.get_eef_pose(eef_selected);
     correct_orientation.orientation.w = 0.0;
     correct_orientation.orientation.x = 0.0;
@@ -627,24 +632,25 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
     double fraction = group.computeCartesianPath(waypoints, 0.025, 0.0, robot_trajectory);
     ROS_WARN_STREAM("fraction solved of desired path in this trial is: " <<
                     fraction);  //eef_jump_step size determine the speed of resulted motion
-    if(fraction < 1.0 && waypoints.size() <= 3){
-        moveit::planning_interface::MoveGroup::Plan my_plan;
-        geometry_msgs::PoseStamped init_pose;
-        init_pose.header.frame_id = "/base";
-        init_pose.pose = waypoints[waypoints.size() - 1];
-        group.setPoseTarget(init_pose);
-        bool plan_success = group.plan(my_plan);
-        if(plan_success)
-            group.execute(my_plan);
-        else
-            ROS_ERROR_STREAM("Trying to move to initial position for left arm but group planning result is: " << plan_success);
-        // if wrong orientation move to neutral position and come back
-    }
+//    if(fraction < 1.0 && waypoints.size() <= 3){
+//        moveit::planning_interface::MoveGroup::Plan my_plan;
+//        geometry_msgs::PoseStamped init_pose;
+//        init_pose.header.frame_id = "/base";
+//        init_pose.pose = waypoints.back();
+//        group.setPoseTarget(init_pose);
+//        bool plan_success = group.plan(my_plan);
+//        if(plan_success)
+//            group.execute(my_plan);
+//        else
+//            ROS_ERROR_STREAM("Trying to move to initial position for left arm but group planning result is: " << plan_success);
+//        // if wrong orientation move to neutral position and come back
+//    }
     //this part is to look for an orientation that will produce 100% path, we change only pitch angle because in this setup it is the main angle that will give the required behavior
     int pitch_counter = 0, sign = 1;
     double step = 0.1;
     int trials = 0;
-    while(fraction < 1.0 && waypoints.size() > 3 && trials < 200){
+//    while(fraction < 1.0 && waypoints.size() > 3 && trials < 200){
+    while(fraction < 1.0 && trials < 25){
         ROS_WARN_STREAM("fraction is: " << fraction << " looking for orientations that will return complete path");
         pitch = pitch + step * pitch_counter;
         if (pitch > max_ang && sign > 0){
@@ -656,7 +662,8 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
         //yaw = 0.0;
         orientation.setRPY(roll, pitch, yaw);
         std::vector<geometry_msgs::Pose>::iterator wp_itr;
-        for(wp_itr = waypoints.begin(); wp_itr != waypoints.end() - 3; wp_itr++){
+//        for(wp_itr = waypoints.begin(); wp_itr != waypoints.end() - 3; wp_itr++){
+        for(wp_itr = waypoints.begin(); wp_itr != waypoints.end(); wp_itr++){
             wp_itr->orientation.w = orientation.w();
             wp_itr->orientation.x = orientation.x();
             wp_itr->orientation.y = orientation.y();
@@ -667,7 +674,7 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
         trials += 1;
     }
 
-    if (trials == 200){
+    if (trials == 25){
         ROS_ERROR_STREAM("NOT solution found for trajectory");
         return 2;
     }
