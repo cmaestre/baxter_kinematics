@@ -38,7 +38,9 @@ int restart_robot(baxter_kinematics::RestartRobot::Request &req,
         sub_jointmsg = nh.subscribe<sensor_msgs::JointState>("/robot/joint_states",1,boost::bind(jocommCallback_real,
                                                                                                  _1,
                                                                                                  boost::ref(left_arm_joint_values),
-                                                                                                 boost::ref(right_arm_joint_values)));
+                                                                                                 boost::ref(right_arm_joint_values),
+                                                                                                 boost::ref(all_joint_names),
+                                                                                                 boost::ref(all_joint_values)));
     }
     ros::Subscriber sub_l_eef_msg = nh.subscribe<baxter_core_msgs::EndpointState>("/robot/limb/left/endpoint_state", 10, left_eef_Callback);
     ros::Subscriber sub_r_eef_msg = nh.subscribe<baxter_core_msgs::EndpointState>("/robot/limb/right/endpoint_state", 10, right_eef_Callback);

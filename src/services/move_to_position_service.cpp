@@ -38,7 +38,9 @@ bool move_to_pos(baxter_kinematics::MoveToPos::Request &req,
         sub_jointmsg = nh.subscribe<sensor_msgs::JointState>("/robot/joint_states",1,boost::bind(jocommCallback_real,
                                                                                                  _1,
                                                                                                  boost::ref(left_arm_joint_values),
-                                                                                                 boost::ref(right_arm_joint_values)));
+                                                                                                 boost::ref(right_arm_joint_values),
+                                                                                                 boost::ref(all_joint_names),
+                                                                                                 boost::ref(all_joint_values)));
     }
 
     ros::Subscriber sub_l_eef_msg = nh.subscribe<baxter_core_msgs::EndpointState>("/robot/limb/left/endpoint_state", 10, left_eef_Callback);
@@ -54,7 +56,7 @@ bool move_to_pos(baxter_kinematics::MoveToPos::Request &req,
 
     int curr_iter = 0;
     bool found = false;
-    while (!found and curr_iter < 5){
+    while (!found and curr_iter < 10){
 
         ROS_INFO("Load robot description");
         robot_model_loader::RobotModelLoader robot_model_loader("robot_description");
@@ -103,17 +105,17 @@ bool move_to_pos(baxter_kinematics::MoveToPos::Request &req,
         // get current position
         std::vector<std::string> left_joint_names = {"left_s0", "left_s1", "left_e0", "left_e1", "left_w0", "left_w1", "left_w2"};
         std::vector<std::string> right_joint_names = {"right_s0", "right_s1", "right_e0", "right_e1", "right_w0", "right_w1", "right_w2"};
-        if(!real_robot)
-            if(strcmp(req.eef_name.c_str(), "left") == 0)
-                robot_state.setVariablePositions(left_joint_names, left_arm_joint_values);
-            else if(strcmp(req.eef_name.c_str(), "right") == 0)
-                robot_state.setVariablePositions(right_joint_names, right_arm_joint_values);
-            else{
-                ROS_ERROR("please specify in service request, left or right arm");
-                return false;
-            }
-        else
-            robot_state.setVariablePositions(all_joint_names, all_joint_values);
+//        if(!real_robot)
+        if(strcmp(req.eef_name.c_str(), "left") == 0)
+            robot_state.setVariablePositions(left_joint_names, left_arm_joint_values);
+        else if(strcmp(req.eef_name.c_str(), "right") == 0)
+            robot_state.setVariablePositions(right_joint_names, right_arm_joint_values);
+        else{
+            ROS_ERROR("please specify in service request, left or right arm");
+            return false;
+        }
+//        else
+//            robot_state.setVariablePositions(all_joint_names, all_joint_values);
 
         std::vector<geometry_msgs::Pose> waypoints =
             compute_directed_waypoints(true,

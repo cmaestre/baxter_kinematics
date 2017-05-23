@@ -6,9 +6,10 @@
  * @param the topic msgs about joints states
 **/
 void jocommCallback_sim(const sensor_msgs::JointState::ConstPtr& jo_state,
-                         std::vector<double> &left_arm_joint_values,
-                         std::vector<double> &right_arm_joint_values)
+                        std::vector<double> &left_arm_joint_values,
+                        std::vector<double> &right_arm_joint_values)
 {
+    //ROS_WARN_STREAM("I am at simulated robot because params is: ");
 
     left_arm_joint_values[0] = jo_state->position[5];
     left_arm_joint_values[1] = jo_state->position[6];
@@ -33,27 +34,32 @@ void jocommCallback_sim(const sensor_msgs::JointState::ConstPtr& jo_state,
 **/
 void jocommCallback_real(const sensor_msgs::JointState::ConstPtr& jo_state,
                          std::vector<double> &left_arm_joint_values,
-                         std::vector<double> &right_arm_joint_values)
+                         std::vector<double> &right_arm_joint_values,
+                         std::vector<std::string> &all_joint_names,
+                         std::vector<double> &all_joint_values)
 {
+    //ROS_WARN_STREAM("I am at real robot because params is: ");
+    if(jo_state->position.size() > 9){
+        all_joint_names = jo_state->name;
+        all_joint_values = jo_state->position;
 
-    left_arm_joint_values[0] = jo_state->position[4];
-    left_arm_joint_values[1] = jo_state->position[5];
-    left_arm_joint_values[2] = jo_state->position[2];
-    left_arm_joint_values[3] = jo_state->position[3];
-    left_arm_joint_values[4] = jo_state->position[6];
-    left_arm_joint_values[5] = jo_state->position[7];
-    left_arm_joint_values[6] = jo_state->position[8];
+        left_arm_joint_values[0] = jo_state->position[4];
+        left_arm_joint_values[1] = jo_state->position[5];
+        left_arm_joint_values[2] = jo_state->position[2];
+        left_arm_joint_values[3] = jo_state->position[3];
+        left_arm_joint_values[4] = jo_state->position[6];
+        left_arm_joint_values[5] = jo_state->position[7];
+        left_arm_joint_values[6] = jo_state->position[8];
 
-    right_arm_joint_values[0] = jo_state->position[11];
-    right_arm_joint_values[1] = jo_state->position[12];
-    right_arm_joint_values[2] = jo_state->position[9];
-    right_arm_joint_values[3] = jo_state->position[10];
-    right_arm_joint_values[4] = jo_state->position[13];
-    right_arm_joint_values[5] = jo_state->position[14];
-    right_arm_joint_values[6] = jo_state->position[15];
+        right_arm_joint_values[0] = jo_state->position[11];
+        right_arm_joint_values[1] = jo_state->position[12];
+        right_arm_joint_values[2] = jo_state->position[9];
+        right_arm_joint_values[3] = jo_state->position[10];
+        right_arm_joint_values[4] = jo_state->position[13];
+        right_arm_joint_values[5] = jo_state->position[14];
+        right_arm_joint_values[6] = jo_state->position[15];
+    }
 }
-
-
 
 //return roll pitch yaw from the transformation matrix transform_l_ee_w
 Eigen::Vector3d extract_angles(Eigen::Matrix4d& transform_l_ee_w){
@@ -128,7 +134,7 @@ void locate_eef_pose(geometry_msgs::Pose &eef_feedback, Kinematic_values& eef_va
     eef_values.set_eef_rpy_orientation(eef_current_orientation, gripper);
     eef_values.set_eef_pose(eef_pose_quat, gripper);
     eef_values.set_eef_rpy_pose(end_effector_pose, gripper);
-//    ROS_ERROR_STREAM("locating eef stuff gave for position: " << eef_values.get_eef_position(gripper));// eef_current_position); // << "\n and for orientation: " << eef_current_angles);
+    //    ROS_ERROR_STREAM("locating eef stuff gave for position: " << eef_values.get_eef_position(gripper));// eef_current_position); // << "\n and for orientation: " << eef_current_angles);
 }
 
 /**
@@ -201,8 +207,8 @@ bool restart_robot_initial_position(robot_state::RobotState robot_state,
     nh.getParam("right_eef/initial_pos/y", tmp_y);
     nh.getParam("right_eef/initial_pos/z", tmp_z);
     right_eef_initial_pos << tmp_x,
-                              tmp_y,
-                              tmp_z;
+            tmp_y,
+            tmp_z;
 
     std::string gripper = "right_gripper";
     geometry_msgs::Pose initial_pose = eef_values.get_eef_pose(gripper); // to get the rotation
@@ -243,8 +249,8 @@ bool restart_robot_initial_position(robot_state::RobotState robot_state,
     nh.getParam("left_eef/initial_pos/y", tmp_y);
     nh.getParam("left_eef/initial_pos/z", tmp_z);
     left_eef_initial_pos << tmp_x,
-                          tmp_y,
-                          tmp_z;
+            tmp_y,
+            tmp_z;
 
     gripper = "left_gripper";
     initial_pose = eef_values.get_eef_pose(gripper);
@@ -299,8 +305,8 @@ bool plan_path_to_desired_position(robot_state::RobotState robot_state,
     //Eigen::Vector3d current_position;
     //geometry_msgs::Pose eef_pose = eef_values.get_eef_pose();
     //current_position << eef_pose.position.x,
-//            eef_pose.position.y,
-//            eef_pose.position.z;
+    //            eef_pose.position.y,
+    //            eef_pose.position.z;
     //current_position = eef_values.get_eef_position();
     //ROS_ERROR_STREAM("eef position is: " << eef_values.get_eef_position()(0) << " " << eef_values.get_eef_position()(1) << " " << eef_values.get_eef_position()(2));
 
@@ -335,9 +341,9 @@ bool plan_path_to_desired_position(robot_state::RobotState robot_state,
         my_inter_points << goal(0), goal(1), goal(2);
         path.push_back(my_inter_points);
 
-//        std::vector<Eigen::Vector3d>::iterator iter;
-//        for (iter = path.begin(); iter != path.end(); iter++)
-//            ROS_ERROR_STREAM("the path points: " << (*iter));
+        //        std::vector<Eigen::Vector3d>::iterator iter;
+        //        for (iter = path.begin(); iter != path.end(); iter++)
+        //            ROS_ERROR_STREAM("the path points: " << (*iter));
 
         //start constructing the fine trajectory
         final_path.push_back({path[0]});
@@ -365,8 +371,8 @@ bool plan_path_to_desired_position(robot_state::RobotState robot_state,
                 }
             }
         }
-//        for (iter = final_path.begin(); iter != final_path.end(); iter++)
-//            ROS_ERROR_STREAM((*iter));
+        //        for (iter = final_path.begin(); iter != final_path.end(); iter++)
+        //            ROS_ERROR_STREAM((*iter));
     }
     //the arm is going to home position so just go in reverse
     else {
@@ -527,16 +533,16 @@ bool optimize_trajectory(std::vector<geometry_msgs::Pose>& vector_to_optimize,
 
     std::vector<geometry_msgs::Pose> updated_vector;
 
-    int pos = 0;
+    std::size_t pos = 0;
     while (pos < vector_to_optimize.size()-1){
         geometry_msgs::Pose curr_pose = vector_to_optimize[pos];
         updated_vector.push_back(curr_pose);
         std::vector<double> current_wp = {curr_pose.position.x,
-                                         curr_pose.position.y,
-                                         curr_pose.position.z};
+                                          curr_pose.position.y,
+                                          curr_pose.position.z};
         bool far_found = false;
-        int tmp_pos = pos + 1;
-//        ROS_ERROR_STREAM(pos << " " << tmp_pos);
+        std::size_t tmp_pos = pos + 1;
+        //        ROS_ERROR_STREAM(pos << " " << tmp_pos);
         while (!far_found && (tmp_pos < vector_to_optimize.size())){
             geometry_msgs::Pose next_pose = vector_to_optimize[tmp_pos];
             std::vector<double> next_wp = {next_pose.position.x,
@@ -565,20 +571,20 @@ bool optimize_trajectory(std::vector<geometry_msgs::Pose>& vector_to_optimize,
 **/
 //trajectory_msgs::JointTrajectory plan_trajectory(
 int plan_and_execute_waypoint_traj(std::string selected_eef,
-                                    std::vector<geometry_msgs::Pose> waypoints,
-                                    robot_state::RobotState robot_state,
-                                    actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>& ac,
-                                    std::string object_name,
-                                    std::vector<Eigen::Vector3d>& eef_position_vector,
-                                    std::vector<Eigen::Vector3d>& eef_orientation_vector,
-                                    std::vector<Eigen::Vector3d>& object_position_vector,
-                                    std::vector<Eigen::Vector3d>& object_orientation_vector,
-                                    Kinematic_values& eef_values,
-                                    ros::NodeHandle nh,
-                                    bool feedback_data,
-                                    bool publish_topic,
-                                    int feedback_frequency,
-                                    ros::Publisher traj_res_pub){
+                                   std::vector<geometry_msgs::Pose> waypoints,
+                                   robot_state::RobotState robot_state,
+                                   actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>& ac,
+                                   std::string object_name,
+                                   std::vector<Eigen::Vector3d>& eef_position_vector,
+                                   std::vector<Eigen::Vector3d>& eef_orientation_vector,
+                                   std::vector<Eigen::Vector3d>& object_position_vector,
+                                   std::vector<Eigen::Vector3d>& object_orientation_vector,
+                                   Kinematic_values& eef_values,
+                                   ros::NodeHandle nh,
+                                   bool feedback_data,
+                                   bool publish_topic,
+                                   int feedback_frequency,
+                                   ros::Publisher traj_res_pub){
 
     // remove almost similar wps
     ROS_ERROR_STREAM("nb waypoints before optimization is " << waypoints.size());
@@ -632,25 +638,25 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
     double fraction = group.computeCartesianPath(waypoints, 0.025, 0.0, robot_trajectory);
     ROS_WARN_STREAM("fraction solved of desired path in this trial is: " <<
                     fraction);  //eef_jump_step size determine the speed of resulted motion
-//    if(fraction < 1.0 && waypoints.size() <= 3){
-//        moveit::planning_interface::MoveGroup::Plan my_plan;
-//        geometry_msgs::PoseStamped init_pose;
-//        init_pose.header.frame_id = "/base";
-//        init_pose.pose = waypoints.back();
-//        group.setPoseTarget(init_pose);
-//        bool plan_success = group.plan(my_plan);
-//        if(plan_success)
-//            group.execute(my_plan);
-//        else
-//            ROS_ERROR_STREAM("Trying to move to initial position for left arm but group planning result is: " << plan_success);
-//        // if wrong orientation move to neutral position and come back
-//    }
+    //    if(fraction < 1.0 && waypoints.size() <= 3){
+    //        moveit::planning_interface::MoveGroup::Plan my_plan;
+    //        geometry_msgs::PoseStamped init_pose;
+    //        init_pose.header.frame_id = "/base";
+    //        init_pose.pose = waypoints.back();
+    //        group.setPoseTarget(init_pose);
+    //        bool plan_success = group.plan(my_plan);
+    //        if(plan_success)
+    //            group.execute(my_plan);
+    //        else
+    //            ROS_ERROR_STREAM("Trying to move to initial position for left arm but group planning result is: " << plan_success);
+    //        // if wrong orientation move to neutral position and come back
+    //    }
     //this part is to look for an orientation that will produce 100% path, we change only pitch angle because in this setup it is the main angle that will give the required behavior
     int pitch_counter = 0, sign = 1;
     double step = 0.1;
     int trials = 0;
-//    while(fraction < 1.0 && waypoints.size() > 3 && trials < 200){
-    while(fraction < 1.0 && trials < 25){
+    //    while(fraction < 1.0 && waypoints.size() > 3 && trials < 200){
+    while(fraction < 1.0 && trials < 250){
         ROS_WARN_STREAM("fraction is: " << fraction << " looking for orientations that will return complete path");
         pitch = pitch + step * pitch_counter;
         if (pitch > max_ang && sign > 0){
@@ -662,7 +668,7 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
         //yaw = 0.0;
         orientation.setRPY(roll, pitch, yaw);
         std::vector<geometry_msgs::Pose>::iterator wp_itr;
-//        for(wp_itr = waypoints.begin(); wp_itr != waypoints.end() - 3; wp_itr++){
+        //        for(wp_itr = waypoints.begin(); wp_itr != waypoints.end() - 3; wp_itr++){
         for(wp_itr = waypoints.begin(); wp_itr != waypoints.end(); wp_itr++){
             wp_itr->orientation.w = orientation.w();
             wp_itr->orientation.x = orientation.x();
@@ -674,7 +680,7 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
         trials += 1;
     }
 
-    if (trials == 25){
+    if (trials == 250){
         ROS_ERROR_STREAM("NOT solution found for trajectory");
         return 2;
     }
@@ -696,8 +702,8 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
         ROS_ERROR_STREAM("waypoints size is: " << waypoints.size());
     ROS_ERROR_STREAM("waypoints size is: " << waypoints.size());
 
-//    ros::ServiceClient client_get_object_pose = nh.serviceClient<environment_functionalities::GetObjectState>("/env/get_object_state");
-//    environment_functionalities::GetObjectState getObjectStateSrv;
+    //    ros::ServiceClient client_get_object_pose = nh.serviceClient<environment_functionalities::GetObjectState>("/env/get_object_state");
+    //    environment_functionalities::GetObjectState getObjectStateSrv;
     int count = 0;
     while(!ac.getState().isDone()){
         if(feedback_data && fraction == 1){
@@ -713,39 +719,39 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
                 expected_traj_position[1] = waypoints[i].position.y;
                 expected_traj_position[2] = waypoints[i].position.z;
                 if(largest_difference(curr_eff_position, expected_traj_position) < 0.01){
-//                    ROS_ERROR_STREAM("STORE/PUBLISH FEEDBACK");
+                    //                    ROS_ERROR_STREAM("STORE/PUBLISH FEEDBACK");
                     waypoints.erase(waypoints.begin() + i);
                     count+=1;
 
-//                    //save eef values
-//                    eef_pose = eef_values.get_eef_position(eef_selected);
-//                    eef_position_vector.push_back(eef_pose);
-//                    eef_orientation_vector.push_back(eef_values.get_eef_rpy_orientation(eef_selected));
+                    //                    //save eef values
+                    //                    eef_pose = eef_values.get_eef_position(eef_selected);
+                    //                    eef_position_vector.push_back(eef_pose);
+                    //                    eef_orientation_vector.push_back(eef_values.get_eef_rpy_orientation(eef_selected));
 
-//                    //save object values
-//                    getObjectStateSrv.request.object_name = object_name;
-//                    client_get_object_pose.call(getObjectStateSrv);
-//                    std::vector<double> object_state_vector = getObjectStateSrv.response.object_state;
+                    //                    //save object values
+                    //                    getObjectStateSrv.request.object_name = object_name;
+                    //                    client_get_object_pose.call(getObjectStateSrv);
+                    //                    std::vector<double> object_state_vector = getObjectStateSrv.response.object_state;
 
-//                    Eigen::Vector3d current_object_position;
-//                    current_object_position <<  object_state_vector[0],
-//                                                object_state_vector[1],
-//                                                object_state_vector[2];
-//                    object_position_vector.push_back(current_object_position);
+                    //                    Eigen::Vector3d current_object_position;
+                    //                    current_object_position <<  object_state_vector[0],
+                    //                                                object_state_vector[1],
+                    //                                                object_state_vector[2];
+                    //                    object_position_vector.push_back(current_object_position);
 
-//                    Eigen::Vector3d current_object_orientation;
-//                    current_object_orientation << object_state_vector[3],
-//                                                  object_state_vector[4],
-//                                                  object_state_vector[5];
-//                    object_orientation_vector.push_back(current_object_orientation);
+                    //                    Eigen::Vector3d current_object_orientation;
+                    //                    current_object_orientation << object_state_vector[3],
+                    //                                                  object_state_vector[4],
+                    //                                                  object_state_vector[5];
+                    //                    object_orientation_vector.push_back(current_object_orientation);
 
                     //store to publish afterwards
                     real_traj_to_publish.data.push_back(eef_pose(0));
                     real_traj_to_publish.data.push_back(eef_pose(1));
                     real_traj_to_publish.data.push_back(eef_pose(2));
-//                    real_traj_to_publish.data.push_back(object_state_vector[0]);
-//                    real_traj_to_publish.data.push_back(object_state_vector[1]);
-//                    real_traj_to_publish.data.push_back(object_state_vector[2]);
+                    //                    real_traj_to_publish.data.push_back(object_state_vector[0]);
+                    //                    real_traj_to_publish.data.push_back(object_state_vector[1]);
+                    //                    real_traj_to_publish.data.push_back(object_state_vector[2]);
 
                     added_waypoint++;
 
@@ -762,47 +768,47 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
 
     if(feedback_data){
 
-    //    // publish the remaining wp of the trajectory
-    //    if (publish_topic && (real_traj_to_publish.data.size() > 0)) {
-    //        ROS_ERROR_STREAM("Final printing in topic");
-    //        traj_res_pub.publish(real_traj_to_publish);
-    //    }
+        //    // publish the remaining wp of the trajectory
+        //    if (publish_topic && (real_traj_to_publish.data.size() > 0)) {
+        //        ROS_ERROR_STREAM("Final printing in topic");
+        //        traj_res_pub.publish(real_traj_to_publish);
+        //    }
 
         // add last eef values
         eef_pose = eef_values.get_eef_position(eef_selected);
         eef_position_vector.push_back(eef_pose);
         eef_orientation_vector.push_back(eef_values.get_eef_rpy_orientation(eef_selected));
 
-    //    //add last object values
-    //    getObjectStateSrv.request.object_name = object_name;
-    //    client_get_object_pose.call(getObjectStateSrv);
-    //    std::vector<double> object_state_vector = getObjectStateSrv.response.object_state;
+        //    //add last object values
+        //    getObjectStateSrv.request.object_name = object_name;
+        //    client_get_object_pose.call(getObjectStateSrv);
+        //    std::vector<double> object_state_vector = getObjectStateSrv.response.object_state;
 
-    //    Eigen::Vector3d current_object_position;
-    //    current_object_position <<  object_state_vector[0],
-    //                                object_state_vector[1],
-    //                                object_state_vector[2];
-    //    object_position_vector.push_back(current_object_position);
+        //    Eigen::Vector3d current_object_position;
+        //    current_object_position <<  object_state_vector[0],
+        //                                object_state_vector[1],
+        //                                object_state_vector[2];
+        //    object_position_vector.push_back(current_object_position);
 
-    //    Eigen::Vector3d current_object_orientation;
-    //    current_object_orientation << object_state_vector[3],
-    //                                  object_state_vector[4],
-    //                                  object_state_vector[5];
-    //    object_orientation_vector.push_back(current_object_orientation);
+        //    Eigen::Vector3d current_object_orientation;
+        //    current_object_orientation << object_state_vector[3],
+        //                                  object_state_vector[4],
+        //                                  object_state_vector[5];
+        //    object_orientation_vector.push_back(current_object_orientation);
 
         //store to publish
         real_traj_to_publish.data.push_back(eef_pose(0));
         real_traj_to_publish.data.push_back(eef_pose(1));
         real_traj_to_publish.data.push_back(eef_pose(2));
-    //    real_traj_to_publish.data.push_back(object_state_vector[0]);
-    //    real_traj_to_publish.data.push_back(object_state_vector[1]);
-    //    real_traj_to_publish.data.push_back(object_state_vector[2]);
+        //    real_traj_to_publish.data.push_back(object_state_vector[0]);
+        //    real_traj_to_publish.data.push_back(object_state_vector[1]);
+        //    real_traj_to_publish.data.push_back(object_state_vector[2]);
 
-    //    // publish full trajectory
-    //    if (publish_topic && (real_traj_to_publish.data.size() > 0)) {
-    //        ROS_ERROR_STREAM("Printing full traj in topic");
-    //        traj_res_pub.publish(real_traj_to_publish);
-    //    }
+        //    // publish full trajectory
+        //    if (publish_topic && (real_traj_to_publish.data.size() > 0)) {
+        //        ROS_ERROR_STREAM("Printing full traj in topic");
+        //        traj_res_pub.publish(real_traj_to_publish);
+        //    }
         // publish the remaining wp of the trajectory
         if (real_traj_to_publish.data.size() > 0)
             ROS_ERROR_STREAM("Final printing in topic");

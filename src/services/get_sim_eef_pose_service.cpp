@@ -23,7 +23,9 @@ bool get_sim_eef_pose_callback(baxter_kinematics::GetEefPose::Request &req,
         sub_jointmsg = nh.subscribe<sensor_msgs::JointState>("/robot/joint_states",1,boost::bind(jocommCallback_real,
                                                                                                  _1,
                                                                                                  boost::ref(left_arm_joint_values),
-                                                                                                 boost::ref(right_arm_joint_values)));
+                                                                                                 boost::ref(right_arm_joint_values),
+                                                                                                 boost::ref(all_joint_names),
+                                                                                                 boost::ref(all_joint_values)));
     }
 
     ros::ServiceClient gazebo_model_state = nh.serviceClient<gazebo_msgs::GetModelState>("/gazebo/get_model_state");    

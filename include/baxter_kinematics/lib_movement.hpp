@@ -45,7 +45,9 @@ void jocommCallback_sim(const sensor_msgs::JointState::ConstPtr &jo_state,
 
 void jocommCallback_real(const sensor_msgs::JointState::ConstPtr& jo_state,
                          std::vector<double> &left_arm_joint_values,
-                         std::vector<double> &right_arm_joint_values);
+                         std::vector<double> &right_arm_joint_values,
+                         std::vector<std::string> &all_joint_names,
+                         std::vector<double> &all_joint_values);
 
 //return roll pitch yaw from the transformation matrix transform_l_ee_w
 Eigen::Vector3d extract_angles(Eigen::Matrix4d& transform_l_ee_w);
