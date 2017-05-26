@@ -111,7 +111,7 @@ bool move_to_pos(baxter_kinematics::MoveToPos::Request &req,
         else if(strcmp(req.eef_name.c_str(), "right") == 0)
             robot_state.setVariablePositions(right_joint_names, right_arm_joint_values);
         else{
-            ROS_ERROR("please specify in service request, left or right arm");
+            ROS_ERROR("Please specify in service request, left or right arm");
             return false;
         }
 //        else

@@ -186,74 +186,33 @@ bool restart_robot_initial_position(robot_state::RobotState robot_state,
     // get current position
     std::vector<std::string> left_joint_names = {"left_s0", "left_s1", "left_e0", "left_e1", "left_w0", "left_w1", "left_w2"};
     std::vector<std::string> right_joint_names = {"right_s0", "right_s1", "right_e0", "right_e1", "right_w0", "right_w1", "right_w2"};
-    std::vector<std::string> all_joint_names;
+//    std::vector<std::string> all_joint_names;
 
-    bool real_robot;
-    nh.getParam("real_robot", real_robot);
-    if(real_robot)
-        robot_state.setVariablePositions(all_joint_names, all_joint_values);
+//    bool real_robot;
+//    nh.getParam("real_robot", real_robot);
+//    if(real_robot)
+//        robot_state.setVariablePositions(all_joint_names, all_joint_values);
 
     std::vector<Eigen::Vector3d> dummy;
-    ////////////////////////////////////////////////////////////////////////
-    // Right arm
-    ROS_INFO("\nRight arm to initial position");
-
-    if(!real_robot)
-        robot_state.setVariablePositions(right_joint_names, right_arm_joint_values);
-
-    Eigen::Vector3d right_eef_initial_pos;
     double tmp_x, tmp_y, tmp_z;
-    nh.getParam("right_eef/initial_pos/x", tmp_x);
-    nh.getParam("right_eef/initial_pos/y", tmp_y);
-    nh.getParam("right_eef/initial_pos/z", tmp_z);
-    right_eef_initial_pos << tmp_x,
-            tmp_y,
-            tmp_z;
-
-    std::string gripper = "right_gripper";
-    geometry_msgs::Pose initial_pose = eef_values.get_eef_pose(gripper); // to get the rotation
-    initial_pose.position.x = right_eef_initial_pos[0];
-    initial_pose.position.y = right_eef_initial_pos[1];
-    initial_pose.position.z = right_eef_initial_pos[2];
     std::vector<geometry_msgs::Pose> waypoints;
-    waypoints.push_back(initial_pose);
-    ROS_ERROR_STREAM("Right eef initial position : " << initial_pose.position.x << " " << initial_pose.position.y << " " << initial_pose.position.z);
-
-    bool right_res =
-            plan_and_execute_waypoint_traj("right",
-                                           waypoints,
-                                           robot_state,
-                                           ac_right,
-                                           "",
-                                           dummy,
-                                           dummy,
-                                           dummy,
-                                           dummy,
-                                           eef_values,
-                                           nh);
-
-    if (!right_res){
-        ROS_ERROR_STREAM("restart_robot_initial_position : Failed executing right arm motion");
-        //        return false;
-    }
-
     //////////////////////////////////////////////////////////////////////////
     // Left arm
     ROS_INFO("\nLeft arm to initial pose");
 
-    if(!real_robot)
-        robot_state.setVariablePositions(left_joint_names, left_arm_joint_values);
+//    if(!real_robot)
+    robot_state.setVariablePositions(left_joint_names, left_arm_joint_values);
 
     Eigen::Vector3d left_eef_initial_pos;
     nh.getParam("left_eef/initial_pos/x", tmp_x);
     nh.getParam("left_eef/initial_pos/y", tmp_y);
     nh.getParam("left_eef/initial_pos/z", tmp_z);
     left_eef_initial_pos << tmp_x,
-            tmp_y,
-            tmp_z;
+                            tmp_y,
+                            tmp_z;
 
-    gripper = "left_gripper";
-    initial_pose = eef_values.get_eef_pose(gripper);
+    std::string gripper = "left_gripper";
+    geometry_msgs::Pose initial_pose = eef_values.get_eef_pose(gripper);
     initial_pose.position.x = left_eef_initial_pos[0];
     initial_pose.position.y = left_eef_initial_pos[1];
     initial_pose.position.z = left_eef_initial_pos[2];
@@ -278,6 +237,47 @@ bool restart_robot_initial_position(robot_state::RobotState robot_state,
         ROS_ERROR_STREAM("restart_robot_initial_position : Failed executing left arm motion");
         return false;
     }
+
+    ////////////////////////////////////////////////////////////////////////
+    // Right arm
+    ROS_INFO("\nRight arm to initial position");
+
+//    if(!real_robot)
+    robot_state.setVariablePositions(right_joint_names, right_arm_joint_values);
+
+    Eigen::Vector3d right_eef_initial_pos;
+    nh.getParam("right_eef/initial_pos/x", tmp_x);
+    nh.getParam("right_eef/initial_pos/y", tmp_y);
+    nh.getParam("right_eef/initial_pos/z", tmp_z);
+    right_eef_initial_pos << tmp_x,
+                             tmp_y,
+                             tmp_z;
+
+    gripper = "right_gripper";
+    initial_pose = eef_values.get_eef_pose(gripper); // to get the rotation
+    initial_pose.position.x = right_eef_initial_pos[0];
+    initial_pose.position.y = right_eef_initial_pos[1];
+    initial_pose.position.z = right_eef_initial_pos[2];
+    waypoints.push_back(initial_pose);
+    ROS_ERROR_STREAM("Right eef initial position : " << initial_pose.position.x << " " << initial_pose.position.y << " " << initial_pose.position.z);
+    bool right_res =
+            plan_and_execute_waypoint_traj("right",
+                                           waypoints,
+                                           robot_state,
+                                           ac_right,
+                                           "",
+                                           dummy,
+                                           dummy,
+                                           dummy,
+                                           dummy,
+                                           eef_values,
+                                           nh);
+
+    if (!right_res){
+        ROS_ERROR_STREAM("restart_robot_initial_position : Failed executing right arm motion");
+        return false;
+    }
+
 
     return true;
 }
@@ -587,14 +587,16 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
                                    ros::Publisher traj_res_pub){
 
     // remove almost similar wps
-    ROS_ERROR_STREAM("nb waypoints before optimization is " << waypoints.size());
-    double min_wp_dist;
-    nh.getParam("min_wp_distance", min_wp_dist);
-    if (!optimize_trajectory(waypoints, min_wp_dist)){
-        ROS_ERROR_STREAM("waypoints too close! No execution.");
-        return true;
+    if (waypoints.size() > 1){
+        ROS_ERROR_STREAM("nb waypoints before optimization is " << waypoints.size());
+        double min_wp_dist;
+        nh.getParam("min_wp_distance", min_wp_dist);
+        if (!optimize_trajectory(waypoints, min_wp_dist)){
+            ROS_ERROR_STREAM("waypoints too close! No execution.");
+            return true;
+        }
+        ROS_ERROR_STREAM("nb waypoints after optimization is " << waypoints.size());
     }
-    ROS_ERROR_STREAM("nb waypoints after optimization is " << waypoints.size());
 
     //the move group to move the selected arm to interact with the object as well as to derive it back home
     std::string arm_selected, eef_selected;
@@ -656,7 +658,7 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
     double step = 0.1;
     int trials = 0;
     //    while(fraction < 1.0 && waypoints.size() > 3 && trials < 200){
-    while(fraction < 1.0 && trials < 250){
+    while(fraction < 1.0 && trials < 50){
         ROS_WARN_STREAM("fraction is: " << fraction << " looking for orientations that will return complete path");
         pitch = pitch + step * pitch_counter;
         if (pitch > max_ang && sign > 0){
@@ -680,9 +682,14 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
         trials += 1;
     }
 
-    if (trials == 250){
+    if (trials == 50){
         ROS_ERROR_STREAM("NOT solution found for trajectory");
         return 2;
+    }
+
+    if(trials > 0 && fraction == 1){
+        ROS_ERROR_STREAM("z coordinate is: " << (waypoints[waypoints.size() - 1]).position.z);
+        ROS_ERROR_STREAM("robot state pose: " << robot_state.getGlobalLinkTransform("left_gripper").translation());
     }
 
     if (!ac.waitForServer(ros::Duration(2.0)))
