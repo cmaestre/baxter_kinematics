@@ -586,6 +586,11 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
                                    int feedback_frequency,
                                    ros::Publisher traj_res_pub){
 
+    if (robot_state.getGlobalLinkTransform("left_gripper").translation()[0] < 0){
+        ROS_ERROR_STREAM("Robot state failed !!!!");
+        return 0;
+    }
+
     // remove almost similar wps
     if (waypoints.size() > 1){
         ROS_ERROR_STREAM("nb waypoints before optimization is " << waypoints.size());
