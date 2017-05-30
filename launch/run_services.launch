@@ -14,4 +14,6 @@
 
   <node name="restart_robot_node" pkg="baxter_kinematics" type="restart_robot_service" output="screen" args="joint_states:=/robot/joint_states" />
 
+  <node name="eef_feedback_node" pkg="baxter_kinematics" type="get_sim_eef_pose_service" output="screen" args="joint_states:=/robot/joint_states" />
+
 </launch>

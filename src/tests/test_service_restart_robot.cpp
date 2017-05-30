@@ -9,14 +9,10 @@ Kinematic_values eef_values;
 //call back that register baxter left end effector pose and rearrange the orientation in RPY
 void left_eef_Callback(baxter_core_msgs::EndpointState l_eef_feedback){
     locate_eef_pose(l_eef_feedback.pose, eef_values, "left_gripper");
-    //    ROS_ERROR_STREAM("locating eef stuff gave for position: " << eef_values.get_eef_position("left_gripper")
-    //                     << "\n and for orientation: " << eef_values.get_eef_rpy_orientation("left_gripper"));
 }
 
 void right_eef_Callback(baxter_core_msgs::EndpointState r_eef_feedback){
     locate_eef_pose(r_eef_feedback.pose, eef_values, "right_gripper");
-    //    ROS_ERROR_STREAM("locating eef stuff gave for position: " << eef_values.get_eef_position("left_gripper")
-    //                     << "\n and for orientation: " << eef_values.get_eef_rpy_orientation("left_gripper"));
 }
 
 int main(int argc, char** argv)

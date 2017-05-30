@@ -6,21 +6,15 @@
  * @brief jocommCallback: call back to get feedback about joints angles
  * @param the topic msgs about joints states
 **/
-std::vector<double> left_arm_joint_values(7), right_arm_joint_values(7), all_joint_values;
-std::vector<std::string> all_joint_names;
 Kinematic_values eef_values;
 
 //call back that register baxter left end effector pose and rearrange the orientation in RPY
 void left_eef_Callback(baxter_core_msgs::EndpointState l_eef_feedback){
     locate_eef_pose(l_eef_feedback.pose, eef_values, "left_gripper");
-    //    ROS_ERROR_STREAM("locating eef stuff gave for position: " << eef_values.get_eef_position("left_gripper")
-    //                     << "\n and for orientation: " << eef_values.get_eef_rpy_orientation("left_gripper"));
 }
 
 void right_eef_Callback(baxter_core_msgs::EndpointState r_eef_feedback){
     locate_eef_pose(r_eef_feedback.pose, eef_values, "right_gripper");
-    //    ROS_ERROR_STREAM("locating eef stuff gave for position: " << eef_values.get_eef_position("left_gripper")
-    //                     << "\n and for orientation: " << eef_values.get_eef_rpy_orientation("left_gripper"));
 }
 
 bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
@@ -30,23 +24,6 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
                           actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>& ac_right){
 
     ROS_INFO("Establish communication tools");
-    bool real_robot;
-    nh.getParam("real_robot", real_robot);
-    ros::Subscriber sub_jointmsg;
-    if (!real_robot){
-        sub_jointmsg = nh.subscribe<sensor_msgs::JointState>("/robot/joint_states",1,boost::bind(jocommCallback_sim,
-                                                                                                 _1,
-                                                                                                 boost::ref(left_arm_joint_values),
-                                                                                                 boost::ref(right_arm_joint_values)));
-    }
-    else{
-        sub_jointmsg = nh.subscribe<sensor_msgs::JointState>("/robot/joint_states",1,boost::bind(jocommCallback_real,
-                                                                                                 _1,
-                                                                                                 boost::ref(left_arm_joint_values),
-                                                                                                 boost::ref(right_arm_joint_values),
-                                                                                                 boost::ref(all_joint_names),
-                                                                                                 boost::ref(all_joint_values)));
-    }
 
     ros::Subscriber sub_l_eef_msg = nh.subscribe<baxter_core_msgs::EndpointState>("/robot/limb/left/endpoint_state", 10, left_eef_Callback);
     ros::Subscriber sub_r_eef_msg = nh.subscribe<baxter_core_msgs::EndpointState>("/robot/limb/right/endpoint_state", 10, right_eef_Callback);
@@ -60,10 +37,6 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
     bool found = false;
     while (!found and curr_iter < 5){
         ROS_INFO("Load robot description");
-        robot_model_loader::RobotModelLoader robot_model_loader("robot_description");
-        robot_model::RobotModelPtr robot_model = robot_model_loader.getModel();
-        robot_state::RobotState robot_state(robot_model);
-
         // set arm
         std::string left_arm = "left_arm";
         std::string right_arm = "right_arm";
@@ -75,21 +48,6 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
             ROS_ERROR("please specify in service request, left or right arm");
             return false;
         }
-
-        // get current position
-        std::vector<std::string> left_joint_names = {"left_s0", "left_s1", "left_e0", "left_e1", "left_w0", "left_w1", "left_w2"};
-        std::vector<std::string> right_joint_names = {"right_s0", "right_s1", "right_e0", "right_e1", "right_w0", "right_w1", "right_w2"};
-//        if(!real_robot)
-        if(strcmp(req.eef_name.c_str(), "left") == 0)
-            robot_state.setVariablePositions(left_joint_names, left_arm_joint_values);
-        else if(strcmp(req.eef_name.c_str(), "right") == 0)
-            robot_state.setVariablePositions(right_joint_names, right_arm_joint_values);
-        else{
-            ROS_ERROR("please specify in service request, left or right arm");
-            return false;
-        }
-//        else
-//            robot_state.setVariablePositions(all_joint_names, all_joint_values);
 
         // get initial pose orientation
         std::string gripper;
@@ -115,19 +73,6 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
             ROS_ERROR_STREAM(start_pose.position.x << " " << start_pose.position.y << " " << start_pose.position.z);
         }
 
-        // match joints
-//        if(!real_robot)
-        if(strcmp(req.eef_name.c_str(), "left") == 0)
-            robot_state.setVariablePositions(left_joint_names, left_arm_joint_values);
-        else if(strcmp(req.eef_name.c_str(), "right") == 0)
-            robot_state.setVariablePositions(right_joint_names, right_arm_joint_values);
-        else{
-            ROS_ERROR("please specify in service request, left or right arm");
-            return false;
-        }
-//        else
-//            robot_state.setVariablePositions(all_joint_names, all_joint_values);
-
         // move arms
         std::vector<Eigen::Vector3d> eef_position_vector;
         std::vector<Eigen::Vector3d> eef_orientation_vector;
@@ -142,7 +87,6 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
         if(strcmp(req.eef_name.c_str(), "left") == 0)
             traj_res = plan_and_execute_waypoint_traj("left",
                                                       waypoints,
-                                                      robot_state,
                                                       ac_left,
                                                       "cube", //for feedback
                                                       eef_position_vector,
@@ -158,7 +102,6 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
         else if(strcmp(req.eef_name.c_str(), "right") == 0)
             traj_res = plan_and_execute_waypoint_traj("right",
                                                       waypoints,
-                                                      robot_state,
                                                       ac_right,
                                                       "cube", //for feedback
                                                       eef_position_vector,
@@ -186,18 +129,6 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
         curr_iter++;
     }
 
-    //    //make sure the end effector is at desired position
-    //    f_trans_mat = robot_state.getGlobalLinkTransform("left_gripper");
-    //    std::cout << "position after motion is: \n" << f_trans_mat.translation() << std::endl << "************************************" << std::endl;
-    //    // if((goal - f_trans_mat.translation()).norm() < 0.005){
-    //    if((current_wp - f_trans_mat.translation()).norm() < 0.005){
-    //        ROS_INFO("SUCCESSFUL DELTA MOTION");
-    //        res.success = true;
-    //    }
-    //    else{
-    //        ROS_ERROR("FAILED DELTA MOTION");
-    //        res.success = false;
-    //    }
 
     // Wait till user kills the process (Control-C)
     spinner.stop();

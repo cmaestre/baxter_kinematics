@@ -1,6 +1,7 @@
 #include "../../include/baxter_kinematics/lib_movement.hpp"
 #include <baxter_core_msgs/EndpointState.h>
 #include "baxter_kinematics/MoveToPos.h"
+#include <baxter_kinematics/Trajectory.h>
 #include <time.h>
 
 Kinematic_values eef_values;
@@ -17,18 +18,22 @@ void right_eef_Callback(baxter_core_msgs::EndpointState r_eef_feedback){
 int main(int argc, char** argv)
 {
     // Initialize ROS
-    ros::init(argc, argv, "test_service_move_to_position_node");
+    ros::init(argc, argv, "test_service_execute_trajectory_node");
     ros::NodeHandle nh;
 
     ros::Subscriber sub_l_eef_msg = nh.subscribe<baxter_core_msgs::EndpointState>("/robot/limb/left/endpoint_state", 10, left_eef_Callback);
     ros::Subscriber sub_r_eef_msg = nh.subscribe<baxter_core_msgs::EndpointState>("/robot/limb/right/endpoint_state", 10, right_eef_Callback);
     ros::ServiceClient move_to_position = nh.serviceClient<baxter_kinematics::MoveToPos>("baxter_kinematics/move_to_position");
+    ros::ServiceClient execute_trajectory = nh.serviceClient<baxter_kinematics::Trajectory>("baxter_kinematics/execute_trajectory");
 
     ros::AsyncSpinner spinner (1);
     spinner.start();
 
     baxter_kinematics::MoveToPosRequest req;
     baxter_kinematics::MoveToPosResponse res;
+
+    baxter_kinematics::Trajectory::Request req_traj;
+    baxter_kinematics::Trajectory::Response res_traj;
 
     //move right arm to hame position
     req.eef_name = "right";
@@ -51,11 +56,11 @@ int main(int argc, char** argv)
         ROS_WARN_STREAM("start position is: " << current_position);
         ROS_WARN_STREAM("goal position is: " << goal_position);
 
-        req.eef_name = "left";
-        req.x = goal_position(0);
-        req.y = goal_position(1);
-        req.z = goal_position(2);
-        move_to_position.call(req, res);
+        req_traj.eef_name = "left";
+        req_traj.feedback = false;
+        req_traj.trajectory = {current_position(0), current_position(1), current_position(2),
+                              goal_position(0), goal_position(1), goal_position(2)};
+        execute_trajectory.call(req_traj, res_traj);
     }
     return 0;
 }

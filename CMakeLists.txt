@@ -65,6 +65,9 @@ target_link_libraries(restart_robot_service ${catkin_LIBRARIES} ${Eigen_LIBRARIE
 add_executable(test_planner src/tests/test_planner.cpp ${all_sources})
 target_link_libraries(test_planner ${catkin_LIBRARIES} ${Eigen_LIBRARIES})
 
+add_executable(test_service_execute_trajectory src/tests/test_service_execute_trajectory.cpp ${all_sources})
+target_link_libraries(test_service_execute_trajectory ${catkin_LIBRARIES} ${Eigen_LIBRARIES})
+
 add_executable(test_service_move_to_position src/tests/test_service_move_to_position.cpp ${all_sources})
 target_link_libraries(test_service_move_to_position ${catkin_LIBRARIES} ${Eigen_LIBRARIES})
 

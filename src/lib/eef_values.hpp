@@ -1,12 +1,24 @@
 #ifndef __EEF_VALUES_HPP__
 #define __EEF_VALUES_HPP__
 
-#include <string>
-#include <math.h>
 #include <Eigen/Core>
-#include <vector>
-#include <geometry_msgs/PoseStamped.h>
 #include <tf/tf.h>
+
+#include <ros/ros.h>
+#include <control_msgs/FollowJointTrajectoryAction.h>
+#include <actionlib/client/simple_action_client.h>
+#include <std_msgs/Float64MultiArray.h>
+
+#include <baxter_core_msgs/EndpointState.h>
+
+#include <moveit/move_group_interface/move_group.h>
+
+#include <gazebo_msgs/SpawnModel.h>
+#include <gazebo_msgs/GetModelState.h>
+#include <gazebo_msgs/DeleteModel.h>
+
+#include <geometry_msgs/Pose.h>
+#include "environment_functionalities/GetObjectState.h"
 
 struct Eef_values {
 
