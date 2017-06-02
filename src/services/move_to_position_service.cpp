@@ -29,7 +29,8 @@ bool move_to_pos(baxter_kinematics::MoveToPos::Request &req,
 
     int curr_iter = 0;
     bool found = false;
-    while (!found and curr_iter < 10){
+    int max_nb_tries = 3;
+    while (!found and curr_iter < max_nb_tries){
 
         std::string left_arm = "left_arm";
         std::string right_arm = "right_arm";
@@ -50,7 +51,6 @@ bool move_to_pos(baxter_kinematics::MoveToPos::Request &req,
                     req.z;
 
         std::string temp_side = "no_side"; //eef_values.get_cube_side_value(4); //NO_SIDE
-        std::vector<Eigen::Vector3d> dummy;
 
         std::vector<geometry_msgs::Pose> waypoints =
             compute_directed_waypoints(true,
@@ -64,26 +64,18 @@ bool move_to_pos(baxter_kinematics::MoveToPos::Request &req,
             traj_res = plan_and_execute_waypoint_traj("left",
                                            waypoints,
                                            ac_left,
-                                           "cube",
-                                           dummy,
-                                           dummy,
-                                           dummy,
-                                           dummy,
                                            eef_values,
-                                           nh);
+                                           nh,
+                                           req.force_orien);
         else if(strcmp(req.eef_name.c_str(), "right") == 0)
             traj_res = plan_and_execute_waypoint_traj("right",
                                            waypoints,
                                            ac_right,
-                                           "cube",
-                                           dummy,
-                                           dummy,
-                                           dummy,
-                                           dummy,
                                            eef_values,
-                                           nh);
+                                           nh,
+                                           req.force_orien);
 
-        if (curr_iter == 3 or traj_res == 0)
+        if (curr_iter == max_nb_tries or traj_res == 0)
             res.success = false;
         else if (traj_res == 1){
             res.success = true;

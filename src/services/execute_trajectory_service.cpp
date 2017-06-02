@@ -21,14 +21,13 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
                           baxter_kinematics::Trajectory::Response &res,
                           ros::NodeHandle& nh,
                           actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>& ac_left,
-                          actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>& ac_right){
+                          actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>& ac_right,
+                          ros::Publisher& traj_res_pub){
 
     ROS_INFO("Establish communication tools");
 
     ros::Subscriber sub_l_eef_msg = nh.subscribe<baxter_core_msgs::EndpointState>("/robot/limb/left/endpoint_state", 10, left_eef_Callback);
     ros::Subscriber sub_r_eef_msg = nh.subscribe<baxter_core_msgs::EndpointState>("/robot/limb/right/endpoint_state", 10, right_eef_Callback);
-    ros::ServiceClient gazebo_model_state = nh.serviceClient<gazebo_msgs::GetModelState>("/gazebo/get_model_state");
-    ros::Publisher traj_res_pub = nh.advertise<std_msgs::Float64MultiArray>("/baxter_kinematics/traj_exec_info", 1);
     // Required to trigger previous callbacks
     ros::AsyncSpinner spinner (1);
     spinner.start();
@@ -74,46 +73,28 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
         }
 
         // move arms
-        std::vector<Eigen::Vector3d> eef_position_vector;
-        std::vector<Eigen::Vector3d> eef_orientation_vector;
-        std::vector<Eigen::Vector3d> object_position_vector;
-        std::vector<Eigen::Vector3d> object_orientation_vector;
-        eef_position_vector.clear();
-        eef_orientation_vector.clear();
-        object_position_vector.clear();
-        object_orientation_vector.clear();
+
         int traj_res;
-        int feedback_frequency = 1;
         if(strcmp(req.eef_name.c_str(), "left") == 0)
             traj_res = plan_and_execute_waypoint_traj("left",
                                                       waypoints,
                                                       ac_left,
-                                                      "cube", //for feedback
-                                                      eef_position_vector,
-                                                      eef_orientation_vector,
-                                                      object_position_vector,
-                                                      object_orientation_vector,
                                                       eef_values,
                                                       nh,
+                                                      false, // force_orien
                                                       req.feedback,
-                                                      true, //publish topic
-                                                      feedback_frequency,
-                                                      traj_res_pub);
+                                                      traj_res_pub,
+                                                      "cube"); //for feedback
         else if(strcmp(req.eef_name.c_str(), "right") == 0)
             traj_res = plan_and_execute_waypoint_traj("right",
                                                       waypoints,
                                                       ac_right,
-                                                      "cube", //for feedback
-                                                      eef_position_vector,
-                                                      eef_orientation_vector,
-                                                      object_position_vector,
-                                                      object_orientation_vector,
                                                       eef_values,
                                                       nh,
+                                                      false, // force_orien
                                                       req.feedback,
-                                                      true, //publish topic
-                                                      feedback_frequency,
-                                                      traj_res_pub);
+                                                      traj_res_pub,
+                                                      "cube"); //for feedback
         else{
             ROS_ERROR("please specify in service request, left or right arm");
             return false;
@@ -129,9 +110,7 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
         curr_iter++;
     }
 
-
     // Wait till user kills the process (Control-C)
-    spinner.stop();
     ROS_INFO("Done!\n");
     return true;
 }
@@ -142,12 +121,14 @@ int main(int argc, char **argv)
     ros::NodeHandle n;
     actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> ac_l("/robot/limb/left/follow_joint_trajectory", true);
     actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> ac_r("/robot/limb/right/follow_joint_trajectory", true);
+    ros::Publisher traj_res_pub = n.advertise<std_msgs::Float64MultiArray>("/baxter_kinematics/traj_exec_info", 1);
 
     ros::ServiceServer service = n.advertiseService<
             baxter_kinematics::Trajectory::Request,
             baxter_kinematics::Trajectory::Response>("baxter_kinematics/execute_trajectory", boost::bind(trajectory_execution, _1, _2, n,
                                                                                                     boost::ref(ac_l),
-                                                                                                    boost::ref(ac_r)));
+                                                                                                    boost::ref(ac_r),
+                                                                                                    boost::ref(traj_res_pub)));
     ROS_INFO("Ready to execute trajectory (set of delta motions).");
     ros::spin();
 

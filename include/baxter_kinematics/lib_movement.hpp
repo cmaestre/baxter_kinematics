@@ -69,17 +69,12 @@ bool optimize_trajectory(std::vector<geometry_msgs::Pose>& vector_to_optimize,
 int plan_and_execute_waypoint_traj(std::string selected_eef,
                                     std::vector<geometry_msgs::Pose> waypoints,
                                     actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>& ac,
-                                    std::string object_name,
-                                    std::vector<Eigen::Vector3d>& eef_position_vector,
-                                    std::vector<Eigen::Vector3d>& eef_orientation_vector,
-                                    std::vector<Eigen::Vector3d>& object_position_vector,
-                                    std::vector<Eigen::Vector3d>& object_orientation_vector,
                                     Kinematic_values &eef_values,
                                     ros::NodeHandle nh,
+                                    bool force_orien = false,
                                     bool feedback_data = false,
-                                    bool publish_topic = false,
-                                    int feedback_frequency = 1,
-                                    ros::Publisher traj_res_pub = ros::Publisher());
+                                    ros::Publisher traj_res_pub = ros::Publisher(),
+                                    std::string object_name = "");
 
 
 /** execute a trajectory (nothing returned)

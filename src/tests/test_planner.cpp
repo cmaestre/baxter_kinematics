@@ -42,18 +42,13 @@ int main(int argc, char** argv)
     waypoints.push_back(start_pose);
 //        ROS_ERROR_STREAM("Right arm initial position : " << start_pose.position.x << " " << start_pose.position.y << " " << start_pose.position.z);
 
-    std::vector<Eigen::Vector3d> dummy;
-    bool right_res =
-            plan_and_execute_waypoint_traj("right",
-                                           waypoints,
-                                           ac_r,
-                                           "",
-                                           dummy,
-                                           dummy,
-                                           dummy,
-                                           dummy,
-                                           eef_values,
-                                           nh);
+//    std::vector<Eigen::Vector3d> dummy;
+//    bool right_res =
+//            plan_and_execute_waypoint_traj("right",
+//                                           waypoints,
+//                                           ac_r,
+//                                           eef_values,
+//                                           nh);
 
     eef_values.set_baxter_arm(left_arm);
     while(ros::ok()){
@@ -82,12 +77,7 @@ int main(int argc, char** argv)
 
         plan_and_execute_waypoint_traj("left",
                                        waypoints,
-                                       ac_l,
-                                       "cube",
-                                       dummy,
-                                       dummy,
-                                       dummy,
-                                       dummy,
+                                       ac_l,                                       
                                        eef_values,
                                        nh);
     }
