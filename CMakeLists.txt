@@ -27,6 +27,8 @@ add_service_files(
   MoveToPos.srv
   Trajectory.srv
   RestartRobot.srv
+  GripperAction.srv
+  GripperState.srv
 )
 
 generate_messages(
@@ -59,6 +61,12 @@ target_link_libraries(get_sim_eef_pose_service ${catkin_LIBRARIES} ${Eigen_LIBRA
 
 add_executable(restart_robot_service src/services/restart_robot_service.cpp ${all_sources})
 target_link_libraries(restart_robot_service ${catkin_LIBRARIES} ${Eigen_LIBRARIES})
+
+add_executable(gripper_action_service src/services/gripper_action_service.cpp ${all_sources})
+target_link_libraries(gripper_action_service ${catkin_LIBRARIES} ${Eigen_LIBRARIES})
+
+add_executable(get_gripper_state_service src/services/get_gripper_state_service.cpp ${all_sources})
+target_link_libraries(get_gripper_state_service ${catkin_LIBRARIES} ${Eigen_LIBRARIES})
 
 ## Test files
 

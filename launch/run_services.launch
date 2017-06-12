@@ -14,6 +14,10 @@
 
   <node name="restart_robot_node" pkg="baxter_kinematics" type="restart_robot_service" output="screen" args="joint_states:=/robot/joint_states" />
 
-  <node name="eef_feedback_node" pkg="baxter_kinematics" type="get_sim_eef_pose_service" output="screen" args="joint_states:=/robot/joint_states" />
+  <node name="get_sim_eef_pose_node" pkg="baxter_kinematics" type="get_sim_eef_pose_service" output="screen" args="joint_states:=/robot/joint_states" />
+
+  <node name="gripper_action_node" pkg="baxter_kinematics" type="gripper_action_service" output="screen" args="joint_states:=/robot/joint_states" />
+
+  <node name="get_gripper_state_node" pkg="baxter_kinematics" type="get_gripper_state_service" output="screen" args="joint_states:=/robot/joint_states" />
 
 </launch>

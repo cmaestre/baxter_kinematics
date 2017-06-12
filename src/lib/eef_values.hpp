@@ -29,6 +29,8 @@ struct Eef_values {
 
     std::string baxter_arm;
 
+    double left_gripper_openness, right_gripper_openness;
+
 };
 
 class Kinematic_values{
@@ -43,7 +45,7 @@ public:
 
     ////////////////////////////////////////////
 
-    //left and right grippers pose variables getters
+    // getters
     Eigen::VectorXd& get_eef_rpy_pose(const std::string gripper){
         if(strcmp(gripper.c_str(), "left_gripper") == 0)
             return eef_values.l_eef_rpy_pose;
@@ -53,11 +55,9 @@ public:
 
     geometry_msgs::Pose& get_eef_pose(const std::string gripper){
         if(strcmp(gripper.c_str(), "left_gripper") == 0){
-//            ROS_WARN("******************************* returning left gripper pose *****************************");
             return eef_values.l_eef_pose;
         }
         else{
-//            ROS_WARN("*************************** returning right gripper pose *******************************");
             return eef_values.r_eef_pose;
         }
     }
@@ -76,7 +76,15 @@ public:
             return eef_values.r_eef_rpy_orientation;
     }
 
-    //left and right grippers pose variables getters
+    double get_left_gripper_openness(){
+        return eef_values.left_gripper_openness;
+    }
+
+    double get_right_gripper_openness(){
+        return eef_values.right_gripper_openness;
+    }
+
+    // getters
     void set_eef_pose(geometry_msgs::Pose& eef_pose, const std::string gripper){
         if(strcmp(gripper.c_str(), "left_gripper") == 0)
             eef_values.l_eef_pose = eef_pose;
@@ -108,6 +116,16 @@ public:
     void set_baxter_arm(std::string& baxter_arm){
         eef_values.baxter_arm = baxter_arm;
     }
+
+    void set_left_gripper_openness(double openness){
+        eef_values.left_gripper_openness = openness;
+    }
+
+    void set_right_gripper_openness(double openness){
+        eef_values.right_gripper_openness = openness;
+    }
+
+
 };
 
 #endif
