@@ -10,6 +10,7 @@
 #include <std_msgs/Float64MultiArray.h>
 
 #include <baxter_core_msgs/EndpointState.h>
+#include <baxter_kinematics/GripperAction.h>
 
 #include <moveit/move_group_interface/move_group.h>
 

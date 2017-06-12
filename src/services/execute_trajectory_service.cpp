@@ -1,5 +1,6 @@
 #include "../../include/baxter_kinematics/lib_movement.hpp"
 #include "baxter_kinematics/Trajectory.h"
+#include <baxter_kinematics/GripperAction.h>
 #include <boost/bind.hpp>
 
 /**
@@ -22,7 +23,8 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
                           ros::NodeHandle& nh,
                           actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>& ac_left,
                           actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>& ac_right,
-                          ros::Publisher& traj_res_pub){
+                          ros::Publisher& traj_res_pub,
+                          ros::ServiceClient& gripper_client){
 
     ROS_INFO("Establish communication tools");
 
@@ -73,7 +75,7 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
         }
 
         // move arms
-
+        std::vector<int> gripper_values_vector = req.gripper_values;
         int traj_res;
         if(strcmp(req.eef_name.c_str(), "left") == 0)
             traj_res = plan_and_execute_waypoint_traj("left",
@@ -84,7 +86,9 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
                                                       false, // force_orien
                                                       req.feedback,
                                                       traj_res_pub,
-                                                      "cube"); //for feedback
+                                                      "cube", //for feedback
+                                                      gripper_values_vector,
+                                                      gripper_client);
         else if(strcmp(req.eef_name.c_str(), "right") == 0)
             traj_res = plan_and_execute_waypoint_traj("right",
                                                       waypoints,
@@ -94,7 +98,9 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
                                                       false, // force_orien
                                                       req.feedback,
                                                       traj_res_pub,
-                                                      "cube"); //for feedback
+                                                      "cube", //for feedback
+                                                      gripper_values_vector,
+                                                      gripper_client);
         else{
             ROS_ERROR("please specify in service request, left or right arm");
             return false;
@@ -118,17 +124,19 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "execute_trajectory_node");
-    ros::NodeHandle n;
+    ros::NodeHandle nh;
     actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> ac_l("/robot/limb/left/follow_joint_trajectory", true);
     actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> ac_r("/robot/limb/right/follow_joint_trajectory", true);
-    ros::Publisher traj_res_pub = n.advertise<std_msgs::Float64MultiArray>("/baxter_kinematics/traj_exec_info", 1);
+    ros::Publisher traj_res_pub = nh.advertise<std_msgs::Float64MultiArray>("/baxter_kinematics/traj_exec_info", 1);
+    ros::ServiceClient gripper_client = nh.serviceClient<baxter_kinematics::GripperAction>("/baxter_kinematics/gripper_action");
 
-    ros::ServiceServer service = n.advertiseService<
+    ros::ServiceServer service = nh.advertiseService<
             baxter_kinematics::Trajectory::Request,
-            baxter_kinematics::Trajectory::Response>("baxter_kinematics/execute_trajectory", boost::bind(trajectory_execution, _1, _2, n,
+            baxter_kinematics::Trajectory::Response>("baxter_kinematics/execute_trajectory", boost::bind(trajectory_execution, _1, _2, nh,
                                                                                                     boost::ref(ac_l),
                                                                                                     boost::ref(ac_r),
-                                                                                                    boost::ref(traj_res_pub)));
+                                                                                                    boost::ref(traj_res_pub),
+                                                                                                    boost::ref(gripper_client)));
     ROS_INFO("Ready to execute trajectory (set of delta motions).");
     ros::spin();
 

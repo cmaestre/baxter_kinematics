@@ -1,5 +1,6 @@
 string eef_name
 float64[] trajectory
+int32[] gripper_values
 bool feedback
 ---
 bool success

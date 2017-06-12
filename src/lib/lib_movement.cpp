@@ -382,9 +382,11 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
                                    Kinematic_values& eef_values,
                                    ros::NodeHandle nh,
                                    bool force_orien,
-                                   bool feedback_data,                                   
+                                   bool feedback_data,
                                    ros::Publisher traj_res_pub,
-                                   std::string object_name){
+                                   std::string object_name,
+                                   std::vector<int> gripper_values,
+                                   ros::ServiceClient gripper_client){
 
     // remove almost similar wps
     if (waypoints.size() > 1){
@@ -498,73 +500,100 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
     Eigen::Vector3d eef_pose;
     std_msgs::Float64MultiArray real_traj_to_publish;
     real_traj_to_publish.data.clear();
-    int added_waypoint = 0;
+//    int added_waypoint = 0;
     ROS_ERROR_STREAM("waypoints size is: " << waypoints.size());
 
     ros::ServiceClient client_get_object_pose = nh.serviceClient<environment_functionalities::GetObjectState>("/env/get_object_state");
-    environment_functionalities::GetObjectState getObjectStateSrv;
-    int count = 0;
+    environment_functionalities::GetObjectState getObjectStateSrv;    
     std::vector<Eigen::Vector3d> eef_position_vector;
     std::vector<Eigen::Vector3d> eef_orientation_vector;
     std::vector<Eigen::Vector3d> object_position_vector;
     std::vector<Eigen::Vector3d> object_orientation_vector;
-    while(!ac.getState().isDone()){
-        if(feedback_data && fraction == 1){
-            //always get current eef pose
-            eef_pose = eef_values.get_eef_position(eef_selected);
-            std::vector<double> curr_eff_position(3), expected_traj_position(3);
-            curr_eff_position[0] = eef_pose(0);
-            curr_eff_position[1] = eef_pose(1);
-            curr_eff_position[2] = eef_pose(2);
+    int nb_wp_reached = 0;
+//    while(!ac.getState().isDone()){
+    if(fraction == 1){
+        std::vector<double> curr_eff_position(3), expected_traj_position(3);
+        double curr_distance;
+        bool next_wp_reached;
+        for(size_t i = 0; i < waypoints.size(); ++i){
+            expected_traj_position[0] = waypoints[i].position.x;
+            expected_traj_position[1] = waypoints[i].position.y;
+            expected_traj_position[2] = waypoints[i].position.z;
 
-            for(size_t i = 0; i < waypoints.size(); ++i){
-                expected_traj_position[0] = waypoints[i].position.x;
-                expected_traj_position[1] = waypoints[i].position.y;
-                expected_traj_position[2] = waypoints[i].position.z;
+            next_wp_reached = false;
+            while (!next_wp_reached){
+                eef_pose = eef_values.get_eef_position(eef_selected);
+                curr_eff_position[0] = eef_pose(0);
+                curr_eff_position[1] = eef_pose(1);
+                curr_eff_position[2] = eef_pose(2);
 
-                if(largest_difference(curr_eff_position, expected_traj_position) < 0.01){
-//                    ROS_ERROR_STREAM("STORE/PUBLISH FEEDBACK");
-                    waypoints.erase(waypoints.begin() + i);
-                    count+=1;
+                curr_distance = largest_difference(curr_eff_position, expected_traj_position);
+//                ROS_ERROR_STREAM("Distance to WP: " << i << " is " << curr_distance);
 
-                    //save eef values
-                    eef_pose = eef_values.get_eef_position(eef_selected);
-                    eef_position_vector.push_back(eef_pose);
-                    eef_orientation_vector.push_back(eef_values.get_eef_rpy_orientation(eef_selected));
+                if (curr_distance < 0.0025){
+                    next_wp_reached = true;
 
-                    //save object values
-                    getObjectStateSrv.request.object_name = object_name;
-                    client_get_object_pose.call(getObjectStateSrv);
-                    std::vector<double> object_state_vector = getObjectStateSrv.response.object_state;
+                    // open/close gripper
+                    if (gripper_values.size() > 0){
+                        int curr_gripper_value = gripper_values[i];
+                        ROS_ERROR_STREAM("Gripper: " << curr_gripper_value << " for wp: " << i);
+                        std::string curr_gripper_value_bool;
+                        if (curr_gripper_value == 0)
+                            curr_gripper_value_bool = "close";
+                        else if (curr_gripper_value == 1)
+                            curr_gripper_value_bool = "open";
+                        baxter_kinematics::GripperAction srv;
+                        srv.request.eef_name = selected_eef;
+                        srv.request.action = curr_gripper_value_bool;
+                        if (gripper_client.call(srv))
+                            ROS_WARN_STREAM("Gripper action " << curr_gripper_value_bool << " executed");
+                        else
+                            ROS_ERROR("plan_and_execute_waypoint_traj - Failed to execute gripper action");
+                    }
 
-                    Eigen::Vector3d current_object_position;
-                    current_object_position <<  object_state_vector[0],
-                                                object_state_vector[1],
-                                                object_state_vector[2];
-                    object_position_vector.push_back(current_object_position);
+                    if(feedback_data){
+//                        ROS_ERROR_STREAM("STORE/PUBLISH FEEDBACK");
+                        //save eef values
+                        eef_pose = eef_values.get_eef_position(eef_selected);
+                        eef_position_vector.push_back(eef_pose);
+                        eef_orientation_vector.push_back(eef_values.get_eef_rpy_orientation(eef_selected));
 
-                    Eigen::Vector3d current_object_orientation;
-                    current_object_orientation << object_state_vector[3],
-                                                  object_state_vector[4],
-                                                  object_state_vector[5];
-                    object_orientation_vector.push_back(current_object_orientation);
+                        //save object values
+                        getObjectStateSrv.request.object_name = object_name;
+                        client_get_object_pose.call(getObjectStateSrv);
+                        std::vector<double> object_state_vector = getObjectStateSrv.response.object_state;
 
-                    //store to publish afterwards
-                    real_traj_to_publish.data.push_back(eef_pose(0));
-                    real_traj_to_publish.data.push_back(eef_pose(1));
-                    real_traj_to_publish.data.push_back(eef_pose(2));
-                    real_traj_to_publish.data.push_back(object_state_vector[0]);
-                    real_traj_to_publish.data.push_back(object_state_vector[1]);
-                    real_traj_to_publish.data.push_back(object_state_vector[2]);
+                        Eigen::Vector3d current_object_position;
+                        current_object_position <<  object_state_vector[0],
+                                                    object_state_vector[1],
+                                                    object_state_vector[2];
+                        object_position_vector.push_back(current_object_position);
 
-                    added_waypoint++;
-                }
-            }
-        }
+                        Eigen::Vector3d current_object_orientation;
+                        current_object_orientation << object_state_vector[3],
+                                                      object_state_vector[4],
+                                                      object_state_vector[5];
+                        object_orientation_vector.push_back(current_object_orientation);
 
-    }
+                        //store to publish afterwards
+                        real_traj_to_publish.data.push_back(eef_pose(0));
+                        real_traj_to_publish.data.push_back(eef_pose(1));
+                        real_traj_to_publish.data.push_back(eef_pose(2));
+                        real_traj_to_publish.data.push_back(object_state_vector[0]);
+                        real_traj_to_publish.data.push_back(object_state_vector[1]);
+                        real_traj_to_publish.data.push_back(object_state_vector[2]);
 
-    if(feedback_data && fraction == 1){
+                    }
+
+                    nb_wp_reached += 1;
+
+                } // if curr_distance
+            } // while
+        } // for
+    } // if fraction
+//    } // if while executing
+
+    if(feedback_data){
 
         // add last eef values
         eef_pose = eef_values.get_eef_position(eef_selected);
@@ -600,11 +629,11 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
         if (real_traj_to_publish.data.size() > 0) {
             ROS_ERROR_STREAM("Printing full traj in topic");
             traj_res_pub.publish(real_traj_to_publish);
-        } else {
+        } else
             ROS_ERROR_STREAM("NOTHING TO PUBLISH !!! ");
-        }
-
-        ROS_ERROR_STREAM("Number of saved coordinates is: " << count);
     }
+
+    ROS_ERROR_STREAM("Number of reached wp is: " << nb_wp_reached << "/" << waypoints.size());
+
     return 1;
 }
