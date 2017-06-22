@@ -75,7 +75,7 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
         }
 
         // move arms
-        std::vector<int> gripper_values_vector = req.gripper_values;
+        std::vector<std::string> gripper_values_vector = req.gripper_values;
         int traj_res;
         if(strcmp(req.eef_name.c_str(), "left") == 0)
             traj_res = plan_and_execute_waypoint_traj("left",

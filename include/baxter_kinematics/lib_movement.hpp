@@ -75,7 +75,7 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
                                     bool feedback_data = false,
                                     ros::Publisher traj_res_pub = ros::Publisher(),
                                     std::string object_name = "",
-                                    std::vector<int> gripper_values = std::vector<int>(),
+                                    std::vector<std::string> gripper_values = std::vector<std::string>(),
                                     ros::ServiceClient gripper_client = ros::ServiceClient());
 
 

@@ -6,12 +6,12 @@ Kinematic_values eef_values;
 
 void leftGripperCallback(const baxter_core_msgs::EndEffectorState::ConstPtr& msg)
 {
-  eef_values.set_left_gripper_openness(msg->position);
+  eef_values.set_gripper_openness("left", msg->position);
 }
 
 void rightGripperCallback(const baxter_core_msgs::EndEffectorState::ConstPtr& msg)
 {
-  eef_values.set_right_gripper_openness(msg->position);
+  eef_values.set_gripper_openness("right", msg->position);
 }
 
 bool get_gripper_status(baxter_kinematics::GripperState::Request &req,
@@ -19,9 +19,9 @@ bool get_gripper_status(baxter_kinematics::GripperState::Request &req,
 
     // Select arm and create publisher
     if(strcmp(req.eef_name.c_str(), "left") == 0)
-        res.openness = eef_values.get_left_gripper_openness();
+        res.openness = eef_values.get_gripper_openness("left");
     else if(strcmp(req.eef_name.c_str(), "right") == 0)
-        res.openness = eef_values.get_right_gripper_openness();
+        res.openness = eef_values.get_gripper_openness("right");
     else{
         ROS_ERROR("gripper_action - please specify in service request, left or right arm");
         return false;

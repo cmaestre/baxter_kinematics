@@ -11,6 +11,7 @@
 
 #include <baxter_core_msgs/EndpointState.h>
 #include <baxter_kinematics/GripperAction.h>
+#include "baxter_core_msgs/EndEffectorCommand.h"
 
 #include <moveit/move_group_interface/move_group.h>
 
@@ -77,13 +78,18 @@ public:
             return eef_values.r_eef_rpy_orientation;
     }
 
-    double get_left_gripper_openness(){
-        return eef_values.left_gripper_openness;
+    double get_gripper_openness(std::string eef_name){
+
+        if(strcmp(eef_name.c_str(), "left") == 0)
+            return eef_values.left_gripper_openness;
+        else if(strcmp(eef_name.c_str(), "right") == 0)
+            return eef_values.right_gripper_openness;
+        else{
+            ROS_ERROR("get_gripper_openness - please specify in service request, left or right arm");
+            return -1;
+        }
     }
 
-    double get_right_gripper_openness(){
-        return eef_values.right_gripper_openness;
-    }
 
     // getters
     void set_eef_pose(geometry_msgs::Pose& eef_pose, const std::string gripper){
@@ -118,12 +124,15 @@ public:
         eef_values.baxter_arm = baxter_arm;
     }
 
-    void set_left_gripper_openness(double openness){
-        eef_values.left_gripper_openness = openness;
-    }
+    void set_gripper_openness(std::string eef_name, double openness){
+        if(strcmp(eef_name.c_str(), "left") == 0)
+            eef_values.left_gripper_openness = openness;
+        else if(strcmp(eef_name.c_str(), "right") == 0)
+            eef_values.right_gripper_openness = openness;
+        else{
+            ROS_ERROR("set_gripper_openness - please specify in service request, left or right arm");
+        }
 
-    void set_right_gripper_openness(double openness){
-        eef_values.right_gripper_openness = openness;
     }
 
 

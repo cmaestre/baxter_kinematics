@@ -385,7 +385,7 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
                                    bool feedback_data,
                                    ros::Publisher traj_res_pub,
                                    std::string object_name,
-                                   std::vector<int> gripper_values,
+                                   std::vector<std::string> gripper_values,
                                    ros::ServiceClient gripper_client){
 
     // remove almost similar wps
@@ -515,41 +515,35 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
         std::vector<double> curr_eff_position(3), expected_traj_position(3);
         double curr_distance;
         bool next_wp_reached;
-        for(size_t i = 0; i < waypoints.size(); i++){
+        bool timeOut = false;
+        size_t nb_wp_to_reach = 0;
+        while (nb_wp_to_reach < waypoints.size()){
 
-            expected_traj_position[0] = waypoints[i].position.x;
-            expected_traj_position[1] = waypoints[i].position.y;
-            expected_traj_position[2] = waypoints[i].position.z;
-            eef_pose = eef_values.get_eef_position(eef_selected);
+            expected_traj_position[0] = waypoints[nb_wp_to_reach].position.x;
+            expected_traj_position[1] = waypoints[nb_wp_to_reach].position.y;
+            expected_traj_position[2] = waypoints[nb_wp_to_reach].position.z;
 
             next_wp_reached = false;
-            while (!next_wp_reached){
+            size_t tmp_counter = 0;
+            while (!timeOut && !next_wp_reached){
                 eef_pose = eef_values.get_eef_position(eef_selected);
                 curr_eff_position[0] = eef_pose(0);
                 curr_eff_position[1] = eef_pose(1);
                 curr_eff_position[2] = eef_pose(2);
 
                 curr_distance = largest_difference(curr_eff_position, expected_traj_position);
-//                ROS_ERROR_STREAM("Distance to WP: " << i << " is " << curr_distance);
+                ROS_ERROR_STREAM("Distance to WP: " << nb_wp_to_reach << " is " << curr_distance << " iteration " << tmp_counter);
 
-                if (curr_distance < 0.03){
-                    next_wp_reached = true;
-                    ROS_ERROR_STREAM("WP " << i << " REACHED");
-
+                if (curr_distance < 0.05){                    
+                    ROS_ERROR_STREAM("WP " << nb_wp_to_reach << " REACHED");
                     // open/close gripper
                     if (gripper_values.size() > 0){
-                        int curr_gripper_value = gripper_values[i];
-                        ROS_ERROR_STREAM("Gripper: " << curr_gripper_value << " for wp: " << i);
-                        std::string curr_gripper_value_bool;
-                        if (curr_gripper_value == 0)
-                            curr_gripper_value_bool = "close";
-                        else if (curr_gripper_value == 1)
-                            curr_gripper_value_bool = "open";
+                        std::string curr_gripper_value = gripper_values[nb_wp_to_reach];
                         baxter_kinematics::GripperAction srv;
                         srv.request.eef_name = selected_eef;
-                        srv.request.action = curr_gripper_value_bool;
+                        srv.request.action = curr_gripper_value; //curr_gripper_value_bool;
                         if (gripper_client.call(srv))
-                            ROS_WARN_STREAM("Gripper action " << curr_gripper_value_bool << " executed");
+                            ROS_ERROR_STREAM("Set gripper value " << curr_gripper_value << " for wp " << nb_wp_to_reach);
                         else
                             ROS_ERROR("plan_and_execute_waypoint_traj - Failed to execute gripper action");
                     }
@@ -587,12 +581,19 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
                         real_traj_to_publish.data.push_back(object_state_vector[2]);
 
                     }
-
+                    next_wp_reached = true;
                     nb_wp_reached += 1;
+                } // if wp reached
 
-                } // if curr_distance
+                tmp_counter++;
+                if (tmp_counter > 50000)
+                    timeOut = true;
             } // while
-        } // for
+
+            if (timeOut)
+                ROS_ERROR_STREAM(" WP " << nb_wp_to_reach << "NOT REACHED !!");
+            nb_wp_to_reach++;
+        } // external while
 
         if(feedback_data){
             // add last eef values
