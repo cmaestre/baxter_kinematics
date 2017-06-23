@@ -3,5 +3,6 @@ eef_rotation: {x: 0, y: 3.1415, z: 0}
 left_eef: {home_pos: {x: 0.18, y: 0.6, z: 0.17}, initial_pos: {x: 0.65, y: 0.3, z: 0.14}}
 right_eef: {home_pos: {x: 0.18, y: -0.6, z: 0.17}, initial_pos: {x: 0.65, y: -0.3, z: 0.14}}
 min_wp_distance: 0.001
+gripper_state: {left: 'middle', right: 'middle'}
 
 

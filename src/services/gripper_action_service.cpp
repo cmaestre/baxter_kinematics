@@ -50,6 +50,8 @@ bool gripper_action(baxter_kinematics::GripperAction::Request &req,
         curr_openness = eef_values.get_gripper_openness(eef_name);
         gripperMsg.args = "{position: " + std::to_string(curr_openness + 3) + "}";
     }
+    else if(strcmp(req.action.c_str(), "middle") == 0)
+        gripperMsg.args = "{position: 50.0}";
     else if(strcmp(req.action.c_str(), "close") == 0)
         gripperMsg.args = "{position: 0.0}";
     else if(strcmp(req.action.c_str(), "close_slow") == 0){

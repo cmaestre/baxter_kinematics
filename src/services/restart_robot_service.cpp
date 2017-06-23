@@ -1,5 +1,6 @@
 #include "../../include/baxter_kinematics/lib_movement.hpp"
 #include "baxter_kinematics/RestartRobot.h"
+#include "baxter_kinematics/GripperAction.h"
 
 Kinematic_values eef_values;
 
@@ -17,7 +18,8 @@ int restart_robot(baxter_kinematics::RestartRobot::Request &req,
                   baxter_kinematics::RestartRobot::Response &res,
                   ros::NodeHandle& nh,
                   actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>& ac_left,
-                  actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>& ac_right){
+                  actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>& ac_right,
+                  ros::ServiceClient& client_gripper){
 
     ROS_INFO("Establish communication tools");
     ros::Subscriber sub_l_eef_msg = nh.subscribe<baxter_core_msgs::EndpointState>("/robot/limb/left/endpoint_state", 10, left_eef_Callback);
@@ -26,7 +28,22 @@ int restart_robot(baxter_kinematics::RestartRobot::Request &req,
     // Required for communication with moveit components
     ros::AsyncSpinner spinner (1);
     spinner.start();
-    ROS_INFO("Load robot description");
+
+    // Set gripper by default action
+    baxter_kinematics::GripperAction srv;
+    std::string current_action;
+    nh.getParam("gripper_state/left", current_action);
+    srv.request.eef_name = "left";
+    srv.request.action = current_action;
+    if (!client_gripper.call(srv))
+        ROS_ERROR_STREAM("restart_robot - Failed to execute action " << current_action << " on left gripper");
+
+    nh.getParam("gripper_state/right", current_action);
+    srv.request.eef_name = "right";
+    srv.request.action = current_action;
+    if (!client_gripper.call(srv))
+        ROS_ERROR_STREAM("restart_robot - Failed to execute action " << current_action << " on right gripper");
+
     bool mov_res = restart_robot_initial_position(eef_values,
                                                   ac_left,
                                                   ac_right,
@@ -51,9 +68,13 @@ int main(int argc, char** argv)
 
     actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> ac_left("/robot/limb/left/follow_joint_trajectory", true);
     actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> ac_right("/robot/limb/right/follow_joint_trajectory", true);
+    ros::ServiceClient client_gripper = nh.serviceClient<baxter_kinematics::GripperAction>("/baxter_kinematics/gripper_action");
+
     ros::ServiceServer service = nh.advertiseService<baxter_kinematics::RestartRobot::Request,
             baxter_kinematics::RestartRobot::Response>("baxter_kinematics/restart_robot", boost::bind(restart_robot, _1, _2, nh,
-                                                                                                      boost::ref(ac_left), boost::ref(ac_right)));
+                                                                                                      boost::ref(ac_left),
+                                                                                                      boost::ref(ac_right),
+                                                                                                      boost::ref(client_gripper)));
     ROS_INFO("Ready to restart robot.");
     ros::spin();
 

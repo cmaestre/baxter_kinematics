@@ -73,7 +73,6 @@ bool restart_robot_initial_position(Kinematic_values& eef_values,
                                     actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>& ac_left,
                                     actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>& ac_right,
                                     ros::NodeHandle nh){
-    std::vector<Eigen::Vector3d> dummy;
     double tmp_x, tmp_y, tmp_z;
     std::vector<geometry_msgs::Pose> waypoints;
     //////////////////////////////////////////////////////////////////////////
