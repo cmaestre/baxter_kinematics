@@ -595,6 +595,7 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
         } // external while
 
         if(feedback_data){
+            sleep(1);
             // add last eef values
             eef_pose = eef_values.get_eef_position(eef_selected);
             eef_position_vector.push_back(eef_pose);
