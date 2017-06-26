@@ -239,13 +239,16 @@ bool plan_path_to_desired_position(Eigen::Vector3d goal,
     //the arm is going to home position so just go in reverse
     else {
         path.clear();
-        if ((eef_values.get_eef_position(gripper) - goal).norm() < 0.01)
+        if ((eef_values.get_eef_position(gripper) - goal).norm() < 0.01){
+            ROS_ERROR_STREAM("plan_path_to_desired_position - WTF ! " << (eef_values.get_eef_position(gripper)));
+            ROS_ERROR_STREAM("plan_path_to_desired_position - WTF ! " << goal);
             return true;
+        }
         path.push_back(eef_values.get_eef_position(gripper));
-        Eigen::Vector3d over_eef_position = eef_values.get_eef_position(gripper);
+        //Eigen::Vector3d over_eef_position = eef_values.get_eef_position(gripper);
         // if(!eef_values.get_keep_height() && eef_values.get_eef_position(gripper)(2) < 0.0)
         //     over_eef_position[2] += 0.15;
-        path.push_back(over_eef_position);
+        //path.push_back(over_eef_position);
         path.push_back(goal);
     }
     //if it reaches here it means everything went well
@@ -327,7 +330,7 @@ std::vector<geometry_msgs::Pose> compute_directed_waypoints(bool initialize_setu
             waypoints.push_back(pose_holder);
     }
 
-
+ROS_ERROR_STREAM("compute_directed_waypoints - Nb waypoints" << waypoints.size());
 
     return waypoints;
 }
@@ -387,6 +390,8 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
                                    std::vector<std::string> gripper_values,
                                    ros::ServiceClient gripper_client){
 
+ROS_ERROR_STREAM("plan_and_execute_waypoint_traj - Nb waypoints" << waypoints.size());
+
     // remove almost similar wps
     if (waypoints.size() > 1){
         ROS_ERROR_STREAM("nb waypoints before optimization is " << waypoints.size());
@@ -431,7 +436,7 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
     }
 
     moveit_msgs::RobotTrajectory robot_trajectory;
-    double fraction = group.computeCartesianPath(waypoints, 0.025, 0.0, robot_trajectory);
+    double fraction = group.computeCartesianPath(waypoints, 0.01, 0.0, robot_trajectory);
     ROS_WARN_STREAM("fraction solved of desired path in this trial is: " <<
                     fraction);  //eef_jump_step size determine the speed of resulted motion
 
@@ -531,9 +536,9 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
                 curr_eff_position[2] = eef_pose(2);
 
                 curr_distance = largest_difference(curr_eff_position, expected_traj_position);
-                ROS_ERROR_STREAM("Distance to WP: " << nb_wp_to_reach << " is " << curr_distance << " iteration " << tmp_counter);
+                //ROS_ERROR_STREAM("Distance to WP: " << nb_wp_to_reach << " is " << curr_distance << " iteration " << tmp_counter);
 
-                if (curr_distance < 0.05){                    
+                if (curr_distance < 0.05){
                     ROS_ERROR_STREAM("WP " << nb_wp_to_reach << " REACHED");
                     // open/close gripper
                     if (gripper_values.size() > 0){

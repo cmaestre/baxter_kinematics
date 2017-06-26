@@ -20,9 +20,6 @@ bool move_to_pos(baxter_kinematics::MoveToPos::Request &req,
 
     ROS_INFO("Establish communication tools");
 
-    ros::Subscriber sub_l_eef_msg = nh.subscribe<baxter_core_msgs::EndpointState>("/robot/limb/left/endpoint_state", 10, left_eef_Callback);
-    ros::Subscriber sub_r_eef_msg = nh.subscribe<baxter_core_msgs::EndpointState>("/robot/limb/right/endpoint_state", 10, right_eef_Callback);
-
     // Required for communication with moveit components
     ros::AsyncSpinner spinner (1);
     spinner.start();
@@ -95,13 +92,16 @@ bool move_to_pos(baxter_kinematics::MoveToPos::Request &req,
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "move_to_position_node");
-  ros::NodeHandle n;
+  ros::NodeHandle nh;
+
+  ros::Subscriber sub_l_eef_msg = nh.subscribe<baxter_core_msgs::EndpointState>("/robot/limb/left/endpoint_state", 10, left_eef_Callback);
+  ros::Subscriber sub_r_eef_msg = nh.subscribe<baxter_core_msgs::EndpointState>("/robot/limb/right/endpoint_state", 10, right_eef_Callback);
 
   actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> ac_l("/robot/limb/left/follow_joint_trajectory", true);
   actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> ac_r("/robot/limb/right/follow_joint_trajectory", true);
 
-  ros::ServiceServer service = n.advertiseService<baxter_kinematics::MoveToPos::Request,
-          baxter_kinematics::MoveToPos::Response>("baxter_kinematics/move_to_position", boost::bind(move_to_pos, _1, _2, n,
+  ros::ServiceServer service = nh.advertiseService<baxter_kinematics::MoveToPos::Request,
+          baxter_kinematics::MoveToPos::Response>("baxter_kinematics/move_to_position", boost::bind(move_to_pos, _1, _2, nh,
                                                                                                      boost::ref(ac_l),
                                                                                                      boost::ref(ac_r)));
   ROS_INFO("Ready to move to a position.");
