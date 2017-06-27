@@ -1,4 +1,5 @@
 #include "../../include/baxter_kinematics/lib_movement.hpp"
+#include <sstream>
 
 //find nearest vector from my_points to my_goal and return the index of this vector
 int find_nearest(std::vector<Eigen::Vector3d>& my_points,
@@ -239,11 +240,8 @@ bool plan_path_to_desired_position(Eigen::Vector3d goal,
     //the arm is going to home position so just go in reverse
     else {
         path.clear();
-        if ((eef_values.get_eef_position(gripper) - goal).norm() < 0.01){
-            ROS_ERROR_STREAM("plan_path_to_desired_position - WTF ! " << (eef_values.get_eef_position(gripper)));
-            ROS_ERROR_STREAM("plan_path_to_desired_position - WTF ! " << goal);
+        if ((eef_values.get_eef_position(gripper) - goal).norm() < 0.01)
             return true;
-        }
         path.push_back(eef_values.get_eef_position(gripper));
         //Eigen::Vector3d over_eef_position = eef_values.get_eef_position(gripper);
         // if(!eef_values.get_keep_height() && eef_values.get_eef_position(gripper)(2) < 0.0)
@@ -329,9 +327,6 @@ std::vector<geometry_msgs::Pose> compute_directed_waypoints(bool initialize_setu
         if(!same_point)
             waypoints.push_back(pose_holder);
     }
-
-ROS_ERROR_STREAM("compute_directed_waypoints - Nb waypoints" << waypoints.size());
-
     return waypoints;
 }
 
@@ -390,7 +385,8 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
                                    std::vector<std::string> gripper_values,
                                    ros::ServiceClient gripper_client){
 
-ROS_ERROR_STREAM("plan_and_execute_waypoint_traj - Nb waypoints" << waypoints.size());
+    // initially always moves
+    nh.setParam("env_changed", false);
 
     // remove almost similar wps
     if (waypoints.size() > 1){
@@ -519,17 +515,21 @@ ROS_ERROR_STREAM("plan_and_execute_waypoint_traj - Nb waypoints" << waypoints.si
         std::vector<double> curr_eff_position(3), expected_traj_position(3);
         double curr_distance;
         bool next_wp_reached;
-        bool timeOut = false;
+        bool timeOut = false;        
+        std::string tmp_env_changed;
+        nh.getParam("env_changed", tmp_env_changed);
+        bool env_changed;
+        std::istringstream(tmp_env_changed) >> std::boolalpha >> env_changed;
         size_t nb_wp_to_reach = 0;
-        while (nb_wp_to_reach < waypoints.size()){
+        while (!env_changed && (nb_wp_to_reach < waypoints.size())){
 
             expected_traj_position[0] = waypoints[nb_wp_to_reach].position.x;
             expected_traj_position[1] = waypoints[nb_wp_to_reach].position.y;
             expected_traj_position[2] = waypoints[nb_wp_to_reach].position.z;
 
             next_wp_reached = false;
-            size_t tmp_counter = 0;
-            while (!timeOut && !next_wp_reached){
+            size_t tmp_counter = 0;            
+            while (!env_changed && !timeOut && !next_wp_reached){
                 eef_pose = eef_values.get_eef_position(eef_selected);
                 curr_eff_position[0] = eef_pose(0);
                 curr_eff_position[1] = eef_pose(1);
@@ -538,8 +538,8 @@ ROS_ERROR_STREAM("plan_and_execute_waypoint_traj - Nb waypoints" << waypoints.si
                 curr_distance = largest_difference(curr_eff_position, expected_traj_position);
                 //ROS_ERROR_STREAM("Distance to WP: " << nb_wp_to_reach << " is " << curr_distance << " iteration " << tmp_counter);
 
-                if (curr_distance < 0.05){
-                    ROS_ERROR_STREAM("WP " << nb_wp_to_reach << " REACHED");
+                if (curr_distance < 0.025){
+                    ROS_ERROR_STREAM("WP " << nb_wp_to_reach << " REACHED for feedback");
                     // open/close gripper
                     if (gripper_values.size() > 0){
                         std::string curr_gripper_value = gripper_values[nb_wp_to_reach];
@@ -584,14 +584,20 @@ ROS_ERROR_STREAM("plan_and_execute_waypoint_traj - Nb waypoints" << waypoints.si
                         real_traj_to_publish.data.push_back(object_state_vector[1]);
                         real_traj_to_publish.data.push_back(object_state_vector[2]);
 
+                        // publish current trajectory
+                        if (real_traj_to_publish.data.size() > 0) {
+                            ROS_ERROR_STREAM("Traj feedback until WP " << nb_wp_reached);
+                            traj_res_pub.publish(real_traj_to_publish);
+                        }
                     }
                     next_wp_reached = true;
                     nb_wp_reached += 1;
                 } // if wp reached
 
+                nh.getParam("env_changed", env_changed);
                 tmp_counter++;
                 if (tmp_counter > 50000)
-                    timeOut = true;
+                    timeOut = true;                                
             } // while
 
             if (timeOut)
@@ -599,49 +605,55 @@ ROS_ERROR_STREAM("plan_and_execute_waypoint_traj - Nb waypoints" << waypoints.si
             nb_wp_to_reach++;
         } // external while
 
-        if(feedback_data){
-            sleep(1);
-            // add last eef values
-            eef_pose = eef_values.get_eef_position(eef_selected);
-            eef_position_vector.push_back(eef_pose);
-            eef_orientation_vector.push_back(eef_values.get_eef_rpy_orientation(eef_selected));
+        if(env_changed)
+            ac.cancelGoal();
+        else{
+            if (feedback_data){
+                sleep(1);
+                // add last eef values
+                eef_pose = eef_values.get_eef_position(eef_selected);
+                eef_position_vector.push_back(eef_pose);
+                eef_orientation_vector.push_back(eef_values.get_eef_rpy_orientation(eef_selected));
 
-            //add last object values
-            getObjectStateSrv.request.object_name = object_name;
-            client_get_object_pose.call(getObjectStateSrv);
-            std::vector<double> object_state_vector = getObjectStateSrv.response.object_state;
+                //add last object values
+                getObjectStateSrv.request.object_name = object_name;
+                client_get_object_pose.call(getObjectStateSrv);
+                std::vector<double> object_state_vector = getObjectStateSrv.response.object_state;
 
-            Eigen::Vector3d current_object_position;
-            current_object_position <<  object_state_vector[0],
-                                        object_state_vector[1],
-                                        object_state_vector[2];
-            object_position_vector.push_back(current_object_position);
+                Eigen::Vector3d current_object_position;
+                current_object_position <<  object_state_vector[0],
+                                            object_state_vector[1],
+                                            object_state_vector[2];
+                object_position_vector.push_back(current_object_position);
 
-            Eigen::Vector3d current_object_orientation;
-            current_object_orientation << object_state_vector[3],
-                                          object_state_vector[4],
-                                          object_state_vector[5];
-            object_orientation_vector.push_back(current_object_orientation);
+                Eigen::Vector3d current_object_orientation;
+                current_object_orientation << object_state_vector[3],
+                                              object_state_vector[4],
+                                              object_state_vector[5];
+                object_orientation_vector.push_back(current_object_orientation);
 
-            //store to publish
-            real_traj_to_publish.data.push_back(eef_pose(0));
-            real_traj_to_publish.data.push_back(eef_pose(1));
-            real_traj_to_publish.data.push_back(eef_pose(2));
-            real_traj_to_publish.data.push_back(object_state_vector[0]);
-            real_traj_to_publish.data.push_back(object_state_vector[1]);
-            real_traj_to_publish.data.push_back(object_state_vector[2]);
+                //store to publish
+                real_traj_to_publish.data.push_back(eef_pose(0));
+                real_traj_to_publish.data.push_back(eef_pose(1));
+                real_traj_to_publish.data.push_back(eef_pose(2));
+                real_traj_to_publish.data.push_back(object_state_vector[0]);
+                real_traj_to_publish.data.push_back(object_state_vector[1]);
+                real_traj_to_publish.data.push_back(object_state_vector[2]);
 
-            // publish full trajectory
-            if (real_traj_to_publish.data.size() > 0) {
-                ROS_ERROR_STREAM("Printing full traj in topic");
-                traj_res_pub.publish(real_traj_to_publish);
-            } else
-                ROS_ERROR_STREAM("NOTHING TO PUBLISH !!! ");
-        }
-
+                // publish full trajectory
+                if (real_traj_to_publish.data.size() > 0) {
+                    ROS_ERROR_STREAM("Printing full traj in topic");
+                    traj_res_pub.publish(real_traj_to_publish);
+                } else
+                    ROS_ERROR_STREAM("NOTHING TO PUBLISH !!! ");
+            } // if feedback
+        } // else
     } // if fraction
 
     ROS_ERROR_STREAM("Number of reached wp is: " << nb_wp_reached << "/" << waypoints.size());
+
+//    // always ready to move
+//    nh.setParam("env_changed", false);
 
     return 1;
 }

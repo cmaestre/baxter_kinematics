@@ -62,7 +62,7 @@ bool gripper_action(baxter_kinematics::GripperAction::Request &req,
         ROS_ERROR("gripper_action - please specify in service request, open, open_slow, close or close_slow command");
         return false;
     }
-ROS_ERROR_STREAM("gripperMsg.args: " << gripperMsg.args);
+
     gripperMsg.command = "go";
     gripperMsg.id = 65538;
     current_pub.publish(gripperMsg);

@@ -127,8 +127,10 @@ int main(int argc, char **argv)
     ros::NodeHandle nh;
     actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> ac_l("/robot/limb/left/follow_joint_trajectory", true);
     actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> ac_r("/robot/limb/right/follow_joint_trajectory", true);
-    ros::Publisher traj_res_pub = nh.advertise<std_msgs::Float64MultiArray>("/baxter_kinematics/traj_exec_info", 1);
     ros::ServiceClient gripper_client = nh.serviceClient<baxter_kinematics::GripperAction>("/baxter_kinematics/gripper_action");
+    std::string feedback_topic_name;
+    nh.getParam("feedback_topic", feedback_topic_name);
+    ros::Publisher traj_res_pub = nh.advertise<std_msgs::Float64MultiArray>(feedback_topic_name, 1);
 
     ros::ServiceServer service = nh.advertiseService<
             baxter_kinematics::Trajectory::Request,
