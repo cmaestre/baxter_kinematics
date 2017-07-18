@@ -1,3 +1,5 @@
 *.user
 .vscode/settings.json
 CMakeLists.txt~
+*txt.user
+*txt.user.*
