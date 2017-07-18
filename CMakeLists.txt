@@ -29,6 +29,8 @@ add_service_files(
   RestartRobot.srv
   GripperAction.srv
   GripperState.srv
+  AlignWithObject.srv
+  RotateToAngle.srv
 )
 
 generate_messages(
@@ -52,6 +54,12 @@ file ( GLOB_RECURSE all_sources src/lib/* )
 
 add_executable(move_to_position_service src/services/move_to_position_service.cpp ${all_sources})
 target_link_libraries(move_to_position_service ${catkin_LIBRARIES} ${Eigen_LIBRARIES})
+
+add_executable(align_with_object_service src/services/align_with_object_service.cpp ${all_sources})
+target_link_libraries(align_with_object_service ${catkin_LIBRARIES} ${Eigen_LIBRARIES})
+
+add_executable(rotate_to_angle_service src/services/rotate_to_angle_service.cpp ${all_sources})
+target_link_libraries(rotate_to_angle_service ${catkin_LIBRARIES} ${Eigen_LIBRARIES})
 
 add_executable(execute_trajectory_service src/services/execute_trajectory_service.cpp ${all_sources})
 target_link_libraries(execute_trajectory_service ${catkin_LIBRARIES} ${Eigen_LIBRARIES})

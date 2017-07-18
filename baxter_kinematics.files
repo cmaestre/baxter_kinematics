@@ -1,0 +1,16 @@
+include/baxter_kinematics/lib_movement.hpp
+src/lib/eef_values.hpp
+src/lib/lib_movement.cpp
+src/services/execute_trajectory_service.cpp
+src/services/get_gripper_state_service.cpp
+src/services/get_real_eef_pose_service.cpp
+src/services/get_sim_eef_pose_service.cpp
+src/services/gripper_action_service.cpp
+src/services/move_to_position_service.cpp
+src/services/restart_robot_service.cpp
+src/services/rotate_to_object_service.cpp
+src/tests/test_planner.cpp
+src/tests/test_service_execute_trajectory.cpp
+src/tests/test_service_move_to_position.cpp
+src/tests/test_service_move_to_position_up_down.cpp
+src/tests/test_service_restart_robot.cpp
