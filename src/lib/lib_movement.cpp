@@ -554,6 +554,9 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
 
                     if(feedback_data){
 //                        ROS_ERROR_STREAM("STORE/PUBLISH FEEDBACK");
+
+                        real_traj_to_publish.data.clear();
+
                         //save eef values
                         eef_pose = eef_values.get_eef_position(eef_selected);
                         eef_position_vector.push_back(eef_pose);
@@ -607,47 +610,47 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
 
         if(env_changed)
             ac.cancelGoal();
-        else{
-            if (feedback_data){
-                sleep(1);
-                // add last eef values
-                eef_pose = eef_values.get_eef_position(eef_selected);
-                eef_position_vector.push_back(eef_pose);
-                eef_orientation_vector.push_back(eef_values.get_eef_rpy_orientation(eef_selected));
+//        else{
+//            if (feedback_data){
+//                sleep(1);
+//                // add last eef values
+//                eef_pose = eef_values.get_eef_position(eef_selected);
+//                eef_position_vector.push_back(eef_pose);
+//                eef_orientation_vector.push_back(eef_values.get_eef_rpy_orientation(eef_selected));
 
-                //add last object values
-                getObjectStateSrv.request.object_name = object_name;
-                client_get_object_pose.call(getObjectStateSrv);
-                std::vector<double> object_state_vector = getObjectStateSrv.response.object_state;
+//                //add last object values
+//                getObjectStateSrv.request.object_name = object_name;
+//                client_get_object_pose.call(getObjectStateSrv);
+//                std::vector<double> object_state_vector = getObjectStateSrv.response.object_state;
 
-                Eigen::Vector3d current_object_position;
-                current_object_position <<  object_state_vector[0],
-                                            object_state_vector[1],
-                                            object_state_vector[2];
-                object_position_vector.push_back(current_object_position);
+//                Eigen::Vector3d current_object_position;
+//                current_object_position <<  object_state_vector[0],
+//                                            object_state_vector[1],
+//                                            object_state_vector[2];
+//                object_position_vector.push_back(current_object_position);
 
-                Eigen::Vector3d current_object_orientation;
-                current_object_orientation << object_state_vector[3],
-                                              object_state_vector[4],
-                                              object_state_vector[5];
-                object_orientation_vector.push_back(current_object_orientation);
+//                Eigen::Vector3d current_object_orientation;
+//                current_object_orientation << object_state_vector[3],
+//                                              object_state_vector[4],
+//                                              object_state_vector[5];
+//                object_orientation_vector.push_back(current_object_orientation);
 
-                //store to publish
-                real_traj_to_publish.data.push_back(eef_pose(0));
-                real_traj_to_publish.data.push_back(eef_pose(1));
-                real_traj_to_publish.data.push_back(eef_pose(2));
-                real_traj_to_publish.data.push_back(object_state_vector[0]);
-                real_traj_to_publish.data.push_back(object_state_vector[1]);
-                real_traj_to_publish.data.push_back(object_state_vector[2]);
+//                //store to publish
+//                real_traj_to_publish.data.push_back(eef_pose(0));
+//                real_traj_to_publish.data.push_back(eef_pose(1));
+//                real_traj_to_publish.data.push_back(eef_pose(2));
+//                real_traj_to_publish.data.push_back(object_state_vector[0]);
+//                real_traj_to_publish.data.push_back(object_state_vector[1]);
+//                real_traj_to_publish.data.push_back(object_state_vector[2]);
 
-                // publish full trajectory
-                if (real_traj_to_publish.data.size() > 0) {
-                    ROS_ERROR_STREAM("Printing full traj in topic");
-                    traj_res_pub.publish(real_traj_to_publish);
-                } else
-                    ROS_ERROR_STREAM("NOTHING TO PUBLISH !!! ");
-            } // if feedback
-        } // else
+//                // publish full trajectory
+//                if (real_traj_to_publish.data.size() > 0) {
+//                    ROS_ERROR_STREAM("Printing full traj in topic");
+//                    traj_res_pub.publish(real_traj_to_publish);
+//                } else
+//                    ROS_ERROR_STREAM("NOTHING TO PUBLISH !!! ");
+//            } // if feedback
+//        } // else
     } // if fraction
 
     ROS_ERROR_STREAM("Number of reached wp is: " << nb_wp_reached << "/" << waypoints.size());
