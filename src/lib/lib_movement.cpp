@@ -503,8 +503,15 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
 //    int added_waypoint = 0;
     ROS_ERROR_STREAM("waypoints size is: " << waypoints.size());
 
-    ros::ServiceClient client_get_object_pose = nh.serviceClient<environment_functionalities::GetObjectState>("/env/get_object_state");
-    environment_functionalities::GetObjectState getObjectStateSrv;    
+    bool real_robot;
+    nh.getParam("real_robot", real_robot);
+    ros::ServiceClient client_get_object_pose;
+    visual_functionalities::GetObjectStateBlob getObjectStateSrvBlob;
+    environment_functionalities::GetObjectState getObjectStateSrv;
+    if (real_robot)
+        client_get_object_pose = nh.serviceClient<visual_functionalities::GetObjectStateBlob>("/visual/get_object_state_blob");
+        client_get_object_pose = nh.serviceClient<environment_functionalities::GetObjectState>("/env/get_object_state");
+    std_msgs::Empty empty;
     std::vector<Eigen::Vector3d> eef_position_vector;
     std::vector<Eigen::Vector3d> eef_orientation_vector;
     std::vector<Eigen::Vector3d> object_position_vector;
@@ -563,9 +570,19 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
                         eef_orientation_vector.push_back(eef_values.get_eef_rpy_orientation(eef_selected));
 
                         //save object values
-                        getObjectStateSrv.request.object_name = object_name;
-                        client_get_object_pose.call(getObjectStateSrv);
-                        std::vector<double> object_state_vector = getObjectStateSrv.response.object_state;
+                        std::vector<double> object_state_vector;
+                        if (real_robot) {
+                            getObjectStateSrvBlob.request.request_position = empty;
+                            client_get_object_pose.call(getObjectStateSrvBlob);
+                            object_state_vector = getObjectStateSrvBlob.response.model_state;
+                        } else {
+                            getObjectStateSrv.request.object_name = object_name;
+                            client_get_object_pose.call(getObjectStateSrv);
+                            object_state_vector = getObjectStateSrv.response.object_state;
+                        }
+                        object_state_vector.push_back(0); // fake orientation
+                        object_state_vector.push_back(0);
+                        object_state_vector.push_back(0);
 
                         Eigen::Vector3d current_object_position;
                         current_object_position <<  object_state_vector[0],
@@ -608,8 +625,8 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
             nb_wp_to_reach++;
         } // external while
 
-        if(env_changed)
-            ac.cancelGoal();
+//        if(env_changed)
+//            ac.cancelGoal();
 //        else{
 //            if (feedback_data){
 //                sleep(1);
