@@ -333,39 +333,30 @@ std::vector<geometry_msgs::Pose> compute_directed_waypoints(bool initialize_setu
 //get rid of repeqted waypoints in a trajectory
 bool optimize_trajectory(std::vector<geometry_msgs::Pose>& vector_to_optimize,
                          double min_wp_dist){
+    //make a copy to work with and another to be the output
 
-    std::vector<geometry_msgs::Pose> updated_vector;
-
-    std::size_t pos = 0;
-    while (pos < vector_to_optimize.size()-1){
-        geometry_msgs::Pose curr_pose = vector_to_optimize[pos];
-        updated_vector.push_back(curr_pose);
-        std::vector<double> current_wp = {curr_pose.position.x,
-                                          curr_pose.position.y,
-                                          curr_pose.position.z};
-        bool far_found = false;
-        std::size_t tmp_pos = pos + 1;
-        //        ROS_ERROR_STREAM(pos << " " << tmp_pos);
-        while (!far_found && (tmp_pos < vector_to_optimize.size())){
-            geometry_msgs::Pose next_pose = vector_to_optimize[tmp_pos];
-            std::vector<double> next_wp = {next_pose.position.x,
-                                           next_pose.position.y,
-                                           next_pose.position.z};
-            if(largest_difference(current_wp, next_wp) >= min_wp_dist) {
-                far_found = true;
-            } else {
-                tmp_pos++;
-            }
-            pos = tmp_pos;
+    ROS_ERROR_STREAM("Vector size before optimizing is: " << vector_to_optimize.size());
+    std::vector<geometry_msgs::Pose> working_copy = vector_to_optimize;
+    for(unsigned i = 0; i < working_copy.size() - 1; i++)
+        for(unsigned j = i + 1; j < working_copy.size(); j++){
+            std::vector<double> first_point = {working_copy[i].position.x,
+                                               working_copy[i].position.y,
+                                               working_copy[i].position.z};
+            std::vector<double> second_point = {working_copy[j].position.x,
+                                                working_copy[j].position.y,
+                                                working_copy[j].position.z};
+            ROS_ERROR_STREAM("The index i is: " << i << " and the index j is:" << j);
+            if(largest_difference(first_point,
+                                   second_point) < min_wp_dist)
+                working_copy.erase(working_copy.begin() + j);
+            ROS_ERROR_STREAM("Largest difference is: " << largest_difference(first_point,
+                                                                             second_point));
         }
-    }
-    updated_vector.push_back(vector_to_optimize.back());
-    vector_to_optimize = updated_vector;
+    vector_to_optimize = working_copy;
+    ROS_ERROR_STREAM("Vector size after optimizing is: " << vector_to_optimize.size());
 
-    if (vector_to_optimize.size() == 1)
-        return false;
-    else
-        return true;
+
+    return(vector_to_optimize.size() > 1);
 }
 
 /**
