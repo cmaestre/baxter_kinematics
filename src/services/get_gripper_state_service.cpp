@@ -2,20 +2,21 @@
 #include "baxter_kinematics/GripperState.h"
 #include "baxter_core_msgs/EndEffectorState.h"
 
-Kinematic_values eef_values;
-
-void leftGripperCallback(const baxter_core_msgs::EndEffectorState::ConstPtr& msg)
+void leftGripperCallback(const baxter_core_msgs::EndEffectorState::ConstPtr& msg,
+                         Kinematic_values& eef_values)
 {
   eef_values.set_gripper_openness("left", msg->position);
 }
 
-void rightGripperCallback(const baxter_core_msgs::EndEffectorState::ConstPtr& msg)
+void rightGripperCallback(const baxter_core_msgs::EndEffectorState::ConstPtr& msg,
+                          Kinematic_values& eef_values)
 {
   eef_values.set_gripper_openness("right", msg->position);
 }
 
 bool get_gripper_status(baxter_kinematics::GripperState::Request &req,
-                        baxter_kinematics::GripperState::Response &res){
+                        baxter_kinematics::GripperState::Response &res,
+                        Kinematic_values& eef_values){
 
     // Select arm and create publisher
     if(strcmp(req.eef_name.c_str(), "left") == 0)
@@ -35,12 +36,16 @@ int main(int argc, char **argv)
 {
   ros::init(argc, argv, "get_gripper_state_node");
   ros::NodeHandle nh;
+  Kinematic_values eef_values;
 
-  ros::Subscriber left_gripper_listener = nh.subscribe("/robot/end_effector/left_gripper/state", 1, leftGripperCallback);
-  ros::Subscriber right_gripper_listener = nh.subscribe("/robot/end_effector/right_gripper/state", 1, rightGripperCallback);
+  ros::Subscriber left_gripper_listener = nh.subscribe<baxter_core_msgs::EndEffectorState>("/robot/end_effector/left_gripper/state", 1, boost::bind(leftGripperCallback, _1,
+                                                                                                                  boost::ref(eef_values)));
+  ros::Subscriber right_gripper_listener = nh.subscribe<baxter_core_msgs::EndEffectorState>("/robot/end_effector/right_gripper/state", 1, boost::bind(rightGripperCallback, _1,
+                                                                                                                  boost::ref(eef_values)));
 
   ros::ServiceServer service = nh.advertiseService<baxter_kinematics::GripperState::Request,
-          baxter_kinematics::GripperState::Response>("baxter_kinematics/get_gripper_openness", boost::bind(get_gripper_status, _1, _2));
+          baxter_kinematics::GripperState::Response>("baxter_kinematics/get_gripper_openness", boost::bind(get_gripper_status, _1, _2,
+                                                                                                           boost::ref(eef_values)));
   ROS_INFO("Ready to move to a position.");
   ros::spin();
 

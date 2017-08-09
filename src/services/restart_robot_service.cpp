@@ -2,16 +2,16 @@
 #include "baxter_kinematics/RestartRobot.h"
 #include "baxter_kinematics/GripperAction.h"
 
-Kinematic_values eef_values;
-
 //call back that register baxter left end effector pose and rearrange the orientation in RPY
-void left_eef_Callback(baxter_core_msgs::EndpointState l_eef_feedback){
-    locate_eef_pose(l_eef_feedback.pose, eef_values, "left_gripper");
+void left_eef_Callback(const baxter_core_msgs::EndpointState::ConstPtr&  l_eef_feedback,
+                       Kinematic_values& eef_values){
+    locate_eef_pose(l_eef_feedback->pose, eef_values, "left_gripper");
 }
 
 //call back that register baxter right end effector pose and rearrange the orientation in RPY
-void right_eef_Callback(baxter_core_msgs::EndpointState r_eef_feedback){
-    locate_eef_pose(r_eef_feedback.pose, eef_values, "right_gripper");
+void right_eef_Callback(const baxter_core_msgs::EndpointState::ConstPtr&  r_eef_feedback,
+                        Kinematic_values& eef_values){
+    locate_eef_pose(r_eef_feedback->pose, eef_values, "right_gripper");
 }
 
 int restart_robot(baxter_kinematics::RestartRobot::Request &req,
@@ -19,12 +19,10 @@ int restart_robot(baxter_kinematics::RestartRobot::Request &req,
                   ros::NodeHandle& nh,
                   actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>& ac_left,
                   actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>& ac_right,
-                  ros::ServiceClient& client_gripper){
+                  ros::ServiceClient& client_gripper,
+                  Kinematic_values& eef_values){
 
     ROS_INFO("Establish communication tools");
-    ros::Subscriber sub_l_eef_msg = nh.subscribe<baxter_core_msgs::EndpointState>("/robot/limb/left/endpoint_state", 10, left_eef_Callback);
-    ros::Subscriber sub_r_eef_msg = nh.subscribe<baxter_core_msgs::EndpointState>("/robot/limb/right/endpoint_state", 10, right_eef_Callback);
-
     // Required for communication with moveit components
     ros::AsyncSpinner spinner (1);
     spinner.start();
@@ -64,8 +62,13 @@ int main(int argc, char** argv)
 {
     // Initialize ROS
     ros::init(argc, argv, "restart_world_node");
-    ros::NodeHandle nh;    
+    ros::NodeHandle nh;
+    Kinematic_values eef_values_;
 
+    ros::Subscriber sub_l_eef_msg = nh.subscribe<baxter_core_msgs::EndpointState>("/robot/limb/left/endpoint_state", 10,
+                                                                                  boost::bind(left_eef_Callback, _1, boost::ref(eef_values_)));
+    ros::Subscriber sub_r_eef_msg = nh.subscribe<baxter_core_msgs::EndpointState>("/robot/limb/right/endpoint_state", 10,
+                                                                                  boost::bind(right_eef_Callback, _1, boost::ref(eef_values_)));
     actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> ac_left("/robot/limb/left/follow_joint_trajectory", true);
     actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> ac_right("/robot/limb/right/follow_joint_trajectory", true);
     ros::ServiceClient client_gripper = nh.serviceClient<baxter_kinematics::GripperAction>("/baxter_kinematics/gripper_action");
@@ -74,7 +77,8 @@ int main(int argc, char** argv)
             baxter_kinematics::RestartRobot::Response>("baxter_kinematics/restart_robot", boost::bind(restart_robot, _1, _2, nh,
                                                                                                       boost::ref(ac_left),
                                                                                                       boost::ref(ac_right),
-                                                                                                      boost::ref(client_gripper)));
+                                                                                                      boost::ref(client_gripper),
+                                                                                                      boost::ref(eef_values_)));
     ROS_INFO("Ready to restart robot.");
     ros::spin();
 

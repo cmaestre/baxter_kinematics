@@ -14,7 +14,7 @@ int find_farthest(std::vector<Eigen::Vector3d>& my_points,
  * input: a baxter core msg that holds left eef status (including the pose as geometry msgs), and the Data_config class
  * return: nothing but set the corresponding variable in the Data_config class
  * */
-void locate_eef_pose(geometry_msgs::Pose& l_eef_feedback, Kinematic_values &eef_values, const std::string gripper = "left_gripper");
+void locate_eef_pose(geometry_msgs::Pose l_eef_feedback, Kinematic_values &eef_values, const std::string gripper = "left_gripper");
 
 
 /** restart arms to initial safe position (before any movement)

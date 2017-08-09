@@ -7,15 +7,17 @@
  * @brief jocommCallback: call back to get feedback about joints angles
  * @param the topic msgs about joints states
 **/
-Kinematic_values eef_values;
 
 //call back that register baxter left end effector pose and rearrange the orientation in RPY
-void left_eef_Callback(baxter_core_msgs::EndpointState l_eef_feedback){
-    locate_eef_pose(l_eef_feedback.pose, eef_values, "left_gripper");
+void left_eef_Callback(const baxter_core_msgs::EndpointState::ConstPtr&  l_eef_feedback,
+                       Kinematic_values& eef_values){
+    locate_eef_pose(l_eef_feedback->pose, eef_values, "left_gripper");
 }
 
-void right_eef_Callback(baxter_core_msgs::EndpointState r_eef_feedback){
-    locate_eef_pose(r_eef_feedback.pose, eef_values, "right_gripper");
+//call back that register baxter right end effector pose and rearrange the orientation in RPY
+void right_eef_Callback(const baxter_core_msgs::EndpointState::ConstPtr&  r_eef_feedback,
+                        Kinematic_values& eef_values){
+    locate_eef_pose(r_eef_feedback->pose, eef_values, "right_gripper");
 }
 
 bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
@@ -24,12 +26,13 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
                           actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>& ac_left,
                           actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>& ac_right,
                           ros::Publisher& traj_res_pub,
-                          ros::ServiceClient& gripper_client){
+                          ros::ServiceClient& gripper_client,
+                          Kinematic_values& eef_values){
 
     ROS_INFO("Establish communication tools");
+    // Record start time
+    auto start = std::chrono::high_resolution_clock::now();
 
-    ros::Subscriber sub_l_eef_msg = nh.subscribe<baxter_core_msgs::EndpointState>("/robot/limb/left/endpoint_state", 10, left_eef_Callback);
-    ros::Subscriber sub_r_eef_msg = nh.subscribe<baxter_core_msgs::EndpointState>("/robot/limb/right/endpoint_state", 10, right_eef_Callback);
     // Required to trigger previous callbacks
     ros::AsyncSpinner spinner (1);
     spinner.start();
@@ -75,6 +78,8 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
         }
 
         // move arms
+        auto exec_start = std::chrono::high_resolution_clock::now();
+
         std::vector<std::string> gripper_values_vector = req.gripper_values;
         int traj_res;
         if(strcmp(req.eef_name.c_str(), "left") == 0)
@@ -114,10 +119,18 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
         else if (traj_res == 2)
             ROS_ERROR_STREAM("plan_and_execute_waypoint_traj - try: " << curr_iter);
         curr_iter++;
+
+        auto exec_finish = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> exec_elapsed = exec_finish - exec_start;
+        ROS_ERROR_STREAM("Execution elapsed time: " << exec_elapsed.count() << " seconds");
     }
 
-    // Wait till user kills the process (Control-C)
     ROS_INFO("Done!\n");
+    // Record end time
+    auto finish = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = finish - start;
+    ROS_ERROR_STREAM("Total elapsed time: " << elapsed.count() << " seconds");
+
     return true;
 }
 
@@ -125,6 +138,13 @@ int main(int argc, char **argv)
 {
     ros::init(argc, argv, "execute_trajectory_node");
     ros::NodeHandle nh;
+    Kinematic_values eef_values;
+
+    ros::Subscriber sub_l_eef_msg = nh.subscribe<baxter_core_msgs::EndpointState>("/robot/limb/left/endpoint_state", 10,
+                                                                                  boost::bind(left_eef_Callback, _1, boost::ref(eef_values)));
+    ros::Subscriber sub_r_eef_msg = nh.subscribe<baxter_core_msgs::EndpointState>("/robot/limb/right/endpoint_state", 10,
+                                                                                  boost::bind(right_eef_Callback, _1, boost::ref(eef_values)));
+
     actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> ac_l("/robot/limb/left/follow_joint_trajectory", true);
     actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> ac_r("/robot/limb/right/follow_joint_trajectory", true);
     ros::ServiceClient gripper_client = nh.serviceClient<baxter_kinematics::GripperAction>("/baxter_kinematics/gripper_action");
@@ -138,7 +158,8 @@ int main(int argc, char **argv)
                                                                                                     boost::ref(ac_l),
                                                                                                     boost::ref(ac_r),
                                                                                                     boost::ref(traj_res_pub),
-                                                                                                    boost::ref(gripper_client)));
+                                                                                                    boost::ref(gripper_client),
+                                                                                                    boost::ref(eef_values)));
     ROS_INFO("Ready to execute trajectory (set of delta motions).");
     ros::spin();
 

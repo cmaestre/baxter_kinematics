@@ -22,6 +22,8 @@
 #include <geometry_msgs/Pose.h>
 #include "environment_functionalities/GetObjectState.h"
 
+#include <chrono>  // for high_resolution_clock
+
 struct Eef_values {
 
     geometry_msgs::Pose l_eef_pose, r_eef_pose;
@@ -33,6 +35,8 @@ struct Eef_values {
 
     double left_gripper_openness, right_gripper_openness;
 
+    boost::shared_ptr<moveit::planning_interface::MoveGroup> move_group_left_pt_;
+    boost::shared_ptr<moveit::planning_interface::MoveGroup> move_group_right_pt_;
 };
 
 class Kinematic_values{
@@ -41,6 +45,13 @@ public:
 
     Eef_values eef_values;
 
+    Kinematic_values(){
+        eef_values.move_group_left_pt_.reset(new moveit::planning_interface::MoveGroup("left_arm"));
+        eef_values.move_group_left_pt_->setPlannerId("RRTConnectkConfigDefault");
+        eef_values.move_group_right_pt_.reset(new moveit::planning_interface::MoveGroup("right_arm"));
+        eef_values.move_group_right_pt_->setPlannerId("RRTConnectkConfigDefault");
+    }
+
     std::string& get_baxter_arm(){
         return eef_values.baxter_arm;
     }
@@ -48,6 +59,14 @@ public:
     ////////////////////////////////////////////
 
     // getters
+    boost::shared_ptr<moveit::planning_interface::MoveGroup> get_move_group(std::string arm_selected){
+        if(strcmp(arm_selected.c_str(), "left_arm") == 0)
+            return eef_values.move_group_left_pt_;
+        else
+            return eef_values.move_group_right_pt_;
+    }
+
+
     Eigen::VectorXd& get_eef_rpy_pose(const std::string gripper){
         if(strcmp(gripper.c_str(), "left_gripper") == 0)
             return eef_values.l_eef_rpy_pose;

@@ -1,22 +1,24 @@
 #include "../../include/baxter_kinematics/lib_movement.hpp"
 #include "baxter_kinematics/MoveToPos.h"
 
-Kinematic_values eef_values;
-
 //call back that register baxter left end effector pose and rearrange the orientation in RPY
-void left_eef_Callback(baxter_core_msgs::EndpointState l_eef_feedback){
-    locate_eef_pose(l_eef_feedback.pose, eef_values, "left_gripper");
+void left_eef_Callback(const baxter_core_msgs::EndpointState::ConstPtr&  l_eef_feedback,
+                       Kinematic_values& eef_values){
+    locate_eef_pose(l_eef_feedback->pose, eef_values, "left_gripper");
 }
 
-void right_eef_Callback(baxter_core_msgs::EndpointState r_eef_feedback){
-    locate_eef_pose(r_eef_feedback.pose, eef_values, "right_gripper");
+//call back that register baxter right end effector pose and rearrange the orientation in RPY
+void right_eef_Callback(const baxter_core_msgs::EndpointState::ConstPtr&  r_eef_feedback,
+                        Kinematic_values& eef_values){
+    locate_eef_pose(r_eef_feedback->pose, eef_values, "right_gripper");
 }
 
 bool move_to_pos(baxter_kinematics::MoveToPos::Request &req,
                       baxter_kinematics::MoveToPos::Response &res,
                       ros::NodeHandle& nh,
                       actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>& ac_left,
-                      actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>& ac_right){
+                      actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>& ac_right,
+                      Kinematic_values& eef_values){
 
     ROS_INFO("Establish communication tools");
 
@@ -93,9 +95,12 @@ int main(int argc, char **argv)
 {
   ros::init(argc, argv, "move_to_position_node");
   ros::NodeHandle nh;
+  Kinematic_values eef_values;
 
-  ros::Subscriber sub_l_eef_msg = nh.subscribe<baxter_core_msgs::EndpointState>("/robot/limb/left/endpoint_state", 10, left_eef_Callback);
-  ros::Subscriber sub_r_eef_msg = nh.subscribe<baxter_core_msgs::EndpointState>("/robot/limb/right/endpoint_state", 10, right_eef_Callback);
+  ros::Subscriber sub_l_eef_msg = nh.subscribe<baxter_core_msgs::EndpointState>("/robot/limb/left/endpoint_state", 10,
+                                                                                boost::bind(left_eef_Callback, _1, boost::ref(eef_values)));
+  ros::Subscriber sub_r_eef_msg = nh.subscribe<baxter_core_msgs::EndpointState>("/robot/limb/right/endpoint_state", 10,
+                                                                                boost::bind(right_eef_Callback, _1, boost::ref(eef_values)));
 
   actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> ac_l("/robot/limb/left/follow_joint_trajectory", true);
   actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> ac_r("/robot/limb/right/follow_joint_trajectory", true);
@@ -103,7 +108,8 @@ int main(int argc, char **argv)
   ros::ServiceServer service = nh.advertiseService<baxter_kinematics::MoveToPos::Request,
           baxter_kinematics::MoveToPos::Response>("baxter_kinematics/move_to_position", boost::bind(move_to_pos, _1, _2, nh,
                                                                                                      boost::ref(ac_l),
-                                                                                                     boost::ref(ac_r)));
+                                                                                                     boost::ref(ac_r),
+                                                                                                     boost::ref(eef_values)));
   ROS_INFO("Ready to move to a position.");
   ros::spin();
 
