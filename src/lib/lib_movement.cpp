@@ -514,6 +514,15 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
     std::vector<Eigen::Vector3d> eef_orientation_vector;
     std::vector<Eigen::Vector3d> object_position_vector;
     std::vector<Eigen::Vector3d> object_orientation_vector;
+
+    bool real_robot;
+    nh.getParam("real_robot", real_robot);
+    visual_functionalities::GetObjectStateBlob getObjectStateSrvBlob;
+    if (real_robot)
+        client_get_object_pose = nh.serviceClient<visual_functionalities::GetObjectStateBlob>("/visual/get_object_state_blob");
+        client_get_object_pose = nh.serviceClient<environment_functionalities::GetObjectState>("/env/get_object_state");
+    std_msgs::Empty empty;
+
     int nb_wp_reached = 0;
     if(fraction == 1){
 
@@ -623,54 +632,8 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
             nb_wp_to_reach++;
         } // external while
 
-<<<<<<< HEAD
         if(env_changed)
             ac.cancelGoal();
-=======
-//        if(env_changed)
-//            ac.cancelGoal();
-//        else{
-//            if (feedback_data){
-//                sleep(1);
-//                // add last eef values
-//                eef_pose = eef_values.get_eef_position(eef_selected);
-//                eef_position_vector.push_back(eef_pose);
-//                eef_orientation_vector.push_back(eef_values.get_eef_rpy_orientation(eef_selected));
-
-//                //add last object values
-//                getObjectStateSrv.request.object_name = object_name;
-//                client_get_object_pose.call(getObjectStateSrv);
-//                std::vector<double> object_state_vector = getObjectStateSrv.response.object_state;
-
-//                Eigen::Vector3d current_object_position;
-//                current_object_position <<  object_state_vector[0],
-//                                            object_state_vector[1],
-//                                            object_state_vector[2];
-//                object_position_vector.push_back(current_object_position);
-
-//                Eigen::Vector3d current_object_orientation;
-//                current_object_orientation << object_state_vector[3],
-//                                              object_state_vector[4],
-//                                              object_state_vector[5];
-//                object_orientation_vector.push_back(current_object_orientation);
-
-//                //store to publish
-//                real_traj_to_publish.data.push_back(eef_pose(0));
-//                real_traj_to_publish.data.push_back(eef_pose(1));
-//                real_traj_to_publish.data.push_back(eef_pose(2));
-//                real_traj_to_publish.data.push_back(object_state_vector[0]);
-//                real_traj_to_publish.data.push_back(object_state_vector[1]);
-//                real_traj_to_publish.data.push_back(object_state_vector[2]);
-
-//                // publish full trajectory
-//                if (real_traj_to_publish.data.size() > 0) {
-//                    ROS_ERROR_STREAM("Printing full traj in topic");
-//                    traj_res_pub.publish(real_traj_to_publish);
-//                } else
-//                    ROS_ERROR_STREAM("NOTHING TO PUBLISH !!! ");
-//            } // if feedback
-//        } // else
->>>>>>> 87db21e19a0139e08fec96db7e6f63df99bc5bcc
     } // if fraction
 
 //    auto feedback_finish = std::chrono::high_resolution_clock::now();
