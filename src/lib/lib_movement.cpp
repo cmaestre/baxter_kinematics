@@ -333,39 +333,30 @@ std::vector<geometry_msgs::Pose> compute_directed_waypoints(bool initialize_setu
 //get rid of repeqted waypoints in a trajectory
 bool optimize_trajectory(std::vector<geometry_msgs::Pose>& vector_to_optimize,
                          double min_wp_dist){
+    //make a copy to work with and another to be the output
 
-    std::vector<geometry_msgs::Pose> updated_vector;
-
-    std::size_t pos = 0;
-    while (pos < vector_to_optimize.size()-1){
-        geometry_msgs::Pose curr_pose = vector_to_optimize[pos];
-        updated_vector.push_back(curr_pose);
-        std::vector<double> current_wp = {curr_pose.position.x,
-                                          curr_pose.position.y,
-                                          curr_pose.position.z};
-        bool far_found = false;
-        std::size_t tmp_pos = pos + 1;
-        //        ROS_ERROR_STREAM(pos << " " << tmp_pos);
-        while (!far_found && (tmp_pos < vector_to_optimize.size())){
-            geometry_msgs::Pose next_pose = vector_to_optimize[tmp_pos];
-            std::vector<double> next_wp = {next_pose.position.x,
-                                           next_pose.position.y,
-                                           next_pose.position.z};
-            if(largest_difference(current_wp, next_wp) >= min_wp_dist) {
-                far_found = true;
-            } else {
-                tmp_pos++;
-            }
-            pos = tmp_pos;
+    ROS_ERROR_STREAM("Vector size before optimizing is: " << vector_to_optimize.size());
+    std::vector<geometry_msgs::Pose> working_copy = vector_to_optimize;
+    for(unsigned i = 0; i < working_copy.size() - 1; i++)
+        for(unsigned j = i + 1; j < working_copy.size(); j++){
+            std::vector<double> first_point = {working_copy[i].position.x,
+                                               working_copy[i].position.y,
+                                               working_copy[i].position.z};
+            std::vector<double> second_point = {working_copy[j].position.x,
+                                                working_copy[j].position.y,
+                                                working_copy[j].position.z};
+            ROS_ERROR_STREAM("The index i is: " << i << " and the index j is:" << j);
+            if(largest_difference(first_point,
+                                   second_point) < min_wp_dist)
+                working_copy.erase(working_copy.begin() + j);
+            ROS_ERROR_STREAM("Largest difference is: " << largest_difference(first_point,
+                                                                             second_point));
         }
-    }
-    updated_vector.push_back(vector_to_optimize.back());
-    vector_to_optimize = updated_vector;
+    vector_to_optimize = working_copy;
+    ROS_ERROR_STREAM("Vector size after optimizing is: " << vector_to_optimize.size());
 
-    if (vector_to_optimize.size() == 1)
-        return false;
-    else
-        return true;
+
+    return(vector_to_optimize.size() > 1);
 }
 
 /**
@@ -577,9 +568,19 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
                         eef_orientation_vector.push_back(eef_values.get_eef_rpy_orientation(eef_selected));
 
                         //save object values
-                        getObjectStateSrv.request.object_name = object_name;
-                        client_get_object_pose.call(getObjectStateSrv);
-                        std::vector<double> object_state_vector = getObjectStateSrv.response.object_state;
+                        std::vector<double> object_state_vector;
+                        if (real_robot) {
+                            getObjectStateSrvBlob.request.request_position = empty;
+                            client_get_object_pose.call(getObjectStateSrvBlob);
+                            object_state_vector = getObjectStateSrvBlob.response.model_state;
+                        } else {
+                            getObjectStateSrv.request.object_name = object_name;
+                            client_get_object_pose.call(getObjectStateSrv);
+                            object_state_vector = getObjectStateSrv.response.object_state;
+                        }
+                        object_state_vector.push_back(0); // fake orientation
+                        object_state_vector.push_back(0);
+                        object_state_vector.push_back(0);
 
                         Eigen::Vector3d current_object_position;
                         current_object_position <<  object_state_vector[0],
@@ -622,8 +623,54 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
             nb_wp_to_reach++;
         } // external while
 
+<<<<<<< HEAD
         if(env_changed)
             ac.cancelGoal();
+=======
+//        if(env_changed)
+//            ac.cancelGoal();
+//        else{
+//            if (feedback_data){
+//                sleep(1);
+//                // add last eef values
+//                eef_pose = eef_values.get_eef_position(eef_selected);
+//                eef_position_vector.push_back(eef_pose);
+//                eef_orientation_vector.push_back(eef_values.get_eef_rpy_orientation(eef_selected));
+
+//                //add last object values
+//                getObjectStateSrv.request.object_name = object_name;
+//                client_get_object_pose.call(getObjectStateSrv);
+//                std::vector<double> object_state_vector = getObjectStateSrv.response.object_state;
+
+//                Eigen::Vector3d current_object_position;
+//                current_object_position <<  object_state_vector[0],
+//                                            object_state_vector[1],
+//                                            object_state_vector[2];
+//                object_position_vector.push_back(current_object_position);
+
+//                Eigen::Vector3d current_object_orientation;
+//                current_object_orientation << object_state_vector[3],
+//                                              object_state_vector[4],
+//                                              object_state_vector[5];
+//                object_orientation_vector.push_back(current_object_orientation);
+
+//                //store to publish
+//                real_traj_to_publish.data.push_back(eef_pose(0));
+//                real_traj_to_publish.data.push_back(eef_pose(1));
+//                real_traj_to_publish.data.push_back(eef_pose(2));
+//                real_traj_to_publish.data.push_back(object_state_vector[0]);
+//                real_traj_to_publish.data.push_back(object_state_vector[1]);
+//                real_traj_to_publish.data.push_back(object_state_vector[2]);
+
+//                // publish full trajectory
+//                if (real_traj_to_publish.data.size() > 0) {
+//                    ROS_ERROR_STREAM("Printing full traj in topic");
+//                    traj_res_pub.publish(real_traj_to_publish);
+//                } else
+//                    ROS_ERROR_STREAM("NOTHING TO PUBLISH !!! ");
+//            } // if feedback
+//        } // else
+>>>>>>> 87db21e19a0139e08fec96db7e6f63df99bc5bcc
     } // if fraction
 
 //    auto feedback_finish = std::chrono::high_resolution_clock::now();

@@ -8,6 +8,7 @@
 #include <control_msgs/FollowJointTrajectoryAction.h>
 #include <actionlib/client/simple_action_client.h>
 #include <std_msgs/Float64MultiArray.h>
+#include <std_msgs/Empty.h>
 
 #include <baxter_core_msgs/EndpointState.h>
 #include <baxter_kinematics/GripperAction.h>
@@ -21,6 +22,7 @@
 
 #include <geometry_msgs/Pose.h>
 #include "environment_functionalities/GetObjectState.h"
+#include "visual_functionalities/GetObjectStateBlob.h"
 
 #include <chrono>  // for high_resolution_clock
 
