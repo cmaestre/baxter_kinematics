@@ -345,12 +345,9 @@ bool optimize_trajectory(std::vector<geometry_msgs::Pose>& vector_to_optimize,
             std::vector<double> second_point = {working_copy[j].position.x,
                                                 working_copy[j].position.y,
                                                 working_copy[j].position.z};
-            ROS_ERROR_STREAM("The index i is: " << i << " and the index j is:" << j);
             if(largest_difference(first_point,
                                    second_point) < min_wp_dist)
                 working_copy.erase(working_copy.begin() + j);
-            ROS_ERROR_STREAM("Largest difference is: " << largest_difference(first_point,
-                                                                             second_point));
         }
     vector_to_optimize = working_copy;
     ROS_ERROR_STREAM("Vector size after optimizing is: " << vector_to_optimize.size());
@@ -378,8 +375,6 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
 
     ///////////// PREVIOUS
 //    auto prev = std::chrono::high_resolution_clock::now();
-    // initially always moves
-    nh.setParam("env_changed", false);
 
     // remove almost similar wps
     if (waypoints.size() > 1){
@@ -507,50 +502,39 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
 //    ROS_ERROR_STREAM("Total execution time: " << exec_plan_elapsed.count() << " seconds");
 
     /////////////////// FEEDBACK
-//    auto feedback_t = std::chrono::high_resolution_clock::now();
-    ros::ServiceClient client_get_object_pose = nh.serviceClient<environment_functionalities::GetObjectState>("/env/get_object_state");
-    environment_functionalities::GetObjectState getObjectStateSrv;    
+//    auto feedback_t = std::chrono::high_resolution_clock::now();        
     std::vector<Eigen::Vector3d> eef_position_vector;
     std::vector<Eigen::Vector3d> eef_orientation_vector;
     std::vector<Eigen::Vector3d> object_position_vector;
     std::vector<Eigen::Vector3d> object_orientation_vector;
 
-    bool real_robot;
-    nh.getParam("real_robot", real_robot);
-    visual_functionalities::GetObjectStateBlob getObjectStateSrvBlob;
-    if (real_robot)
-        client_get_object_pose = nh.serviceClient<visual_functionalities::GetObjectStateBlob>("/visual/get_object_state_blob");
-        client_get_object_pose = nh.serviceClient<environment_functionalities::GetObjectState>("/env/get_object_state");
-    std_msgs::Empty empty;
+    std::vector<double> object_state_vector;
 
     int nb_wp_reached = 0;
-    if(fraction == 1){
+    if(fraction == 1){        
 
         std::vector<double> curr_eff_position(3), expected_traj_position(3);
         double curr_distance;
         bool next_wp_reached;
         bool timeOut = false;        
-        std::string tmp_env_changed;
-        nh.getParam("env_changed", tmp_env_changed);
-        bool env_changed;
-        std::istringstream(tmp_env_changed) >> std::boolalpha >> env_changed;
         size_t nb_wp_to_reach = 0;
-        while (!env_changed && (nb_wp_to_reach < waypoints.size())){
+        while (!ac.getState().isDone() && nb_wp_to_reach < waypoints.size()){
+            auto init_time = std::chrono::high_resolution_clock::now();
 
             expected_traj_position[0] = waypoints[nb_wp_to_reach].position.x;
             expected_traj_position[1] = waypoints[nb_wp_to_reach].position.y;
             expected_traj_position[2] = waypoints[nb_wp_to_reach].position.z;
 
             next_wp_reached = false;
-            size_t tmp_counter = 0;            
-            while (!env_changed && !timeOut && !next_wp_reached){
+//            size_t tmp_counter = 0;
+            while (!timeOut && !next_wp_reached){
                 eef_pose = eef_values.get_eef_position(eef_selected);
                 curr_eff_position[0] = eef_pose(0);
                 curr_eff_position[1] = eef_pose(1);
                 curr_eff_position[2] = eef_pose(2);
 
                 curr_distance = largest_difference(curr_eff_position, expected_traj_position);
-                //ROS_ERROR_STREAM("Distance to WP: " << nb_wp_to_reach << " is " << curr_distance << " iteration " << tmp_counter);
+//                ROS_ERROR_STREAM("Distance to WP: " << nb_wp_to_reach << " is " << curr_distance << " iteration " << tmp_counter);
 
                 if (curr_distance < 0.025){
                     ROS_ERROR_STREAM("WP " << nb_wp_to_reach << " REACHED for feedback");
@@ -567,7 +551,7 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
                     }
 
                     if(feedback_data){
-//                        ROS_ERROR_STREAM("STORE/PUBLISH FEEDBACK");
+                        ROS_ERROR_STREAM("STORE/PUBLISH FEEDBACK");
 
                         real_traj_to_publish.data.clear();
 
@@ -577,16 +561,9 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
                         eef_orientation_vector.push_back(eef_values.get_eef_rpy_orientation(eef_selected));
 
                         //save object values
-                        std::vector<double> object_state_vector;
-                        if (real_robot) {
-                            getObjectStateSrvBlob.request.request_position = empty;
-                            client_get_object_pose.call(getObjectStateSrvBlob);
-                            object_state_vector = getObjectStateSrvBlob.response.model_state;
-                        } else {
-                            getObjectStateSrv.request.object_name = object_name;
-                            client_get_object_pose.call(getObjectStateSrv);
-                            object_state_vector = getObjectStateSrv.response.object_state;
-                        }
+                        object_state_vector = eef_values.get_object_state_vector()[0];
+ROS_ERROR_STREAM("feedback_data: " << eef_values.get_object_state_vector()[0][0]);
+
                         object_state_vector.push_back(0); // fake orientation
                         object_state_vector.push_back(0);
                         object_state_vector.push_back(0);
@@ -621,19 +598,19 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
                     nb_wp_reached += 1;
                 } // if wp reached
 
-                nh.getParam("env_changed", env_changed);
-                tmp_counter++;
-                if (tmp_counter > 50000)
-                    timeOut = true;                                
+//                tmp_counter++;
+//                if (tmp_counter > 50000)
+//                    timeOut = true;
+                auto exec_time = std::chrono::high_resolution_clock::now();
+                std::chrono::duration<double> exec_elapsed = exec_time - init_time;
+                if (exec_elapsed.count() > 5)
+                    timeOut = true;
             } // while
 
             if (timeOut)
-                ROS_ERROR_STREAM(" WP " << nb_wp_to_reach << "NOT REACHED !!");
+                ROS_ERROR_STREAM(" WP " << nb_wp_to_reach << " NOT REACHED !!");
             nb_wp_to_reach++;
         } // external while
-
-        if(env_changed)
-            ac.cancelGoal();
     } // if fraction
 
 //    auto feedback_finish = std::chrono::high_resolution_clock::now();
