@@ -104,7 +104,7 @@ bool restart_robot_initial_position(Kinematic_values& eef_values,
                                            ac_left,
                                            eef_values,
                                            nh,
-                                           true); // force_orien
+                                           false); // force_orien
     if (!left_res){
         ROS_ERROR_STREAM("restart_robot_initial_position : Failed executing left arm motion");
         return false;
@@ -136,7 +136,7 @@ bool restart_robot_initial_position(Kinematic_values& eef_values,
                                            ac_right,
                                            eef_values,
                                            nh,
-                                           true); // force_orien
+                                           false); // force_orien
 
     if (!right_res){
         ROS_ERROR_STREAM("restart_robot_initial_position : Failed executing right arm motion");
@@ -357,6 +357,92 @@ bool optimize_trajectory(std::vector<geometry_msgs::Pose>& vector_to_optimize,
 }
 
 /**
+ * @brief q
+ * @param b
+**/
+void doneCb(const actionlib::SimpleClientGoalState& state,
+            ros::Publisher traj_res_pub,
+            Kinematic_values& eef_values,
+            std::string eef_selected)
+  {
+    /////////////////// FEEDBACK
+//    ROS_ERROR_STREAM("STORE/PUBLISH FEEDBACK");
+//    auto feedback_t = std::chrono::high_resolution_clock::now();
+//    ROS_ERROR_STREAM("WP " << nb_wp_to_reach << " REACHED for feedback");
+//    ROS_ERROR_STREAM("Goal state " << state.getText().c_str());
+
+    Eigen::Vector3d eef_pose;
+    std_msgs::Float64MultiArray real_traj_to_publish;
+    std::vector<Eigen::Vector3d> eef_position_vector;
+    std::vector<Eigen::Vector3d> eef_orientation_vector;
+    std::vector<Eigen::Vector3d> object_position_vector;
+    std::vector<Eigen::Vector3d> object_orientation_vector;
+    std::vector<double> object_state_vector;
+    std::vector<double> curr_eff_position(3);
+
+    eef_pose = eef_values.get_eef_position(eef_selected);
+    curr_eff_position[0] = eef_pose(0);
+    curr_eff_position[1] = eef_pose(1);
+    curr_eff_position[2] = eef_pose(2);
+
+    // open/close gripper
+//        if (gripper_values.size() > 0){
+//            std::string curr_gripper_value = gripper_values[nb_wp_to_reach];
+//            baxter_kinematics::GripperAction srv;
+//            srv.request.eef_name = selected_eef;
+//            srv.request.action = curr_gripper_value; //curr_gripper_value_bool;
+//            if (gripper_client.call(srv))
+//                ROS_ERROR_STREAM("Set gripper value " << curr_gripper_value << " for wp " << nb_wp_to_reach);
+//            else
+//                ROS_ERROR("plan_and_execute_waypoint_traj - Failed to execute gripper action");
+//        }
+
+    //save eef values
+    eef_pose = eef_values.get_eef_position(eef_selected);
+    eef_position_vector.push_back(eef_pose);
+    eef_orientation_vector.push_back(eef_values.get_eef_rpy_orientation(eef_selected));
+
+    //save object values
+    object_state_vector = eef_values.get_object_state_vector()[0];
+
+    object_state_vector.push_back(0); // fake orientation
+    object_state_vector.push_back(0);
+    object_state_vector.push_back(0);
+
+    Eigen::Vector3d current_object_position;
+    current_object_position <<  object_state_vector[0],
+                                object_state_vector[1],
+                                object_state_vector[2];
+    object_position_vector.push_back(current_object_position);
+
+    Eigen::Vector3d current_object_orientation;
+    current_object_orientation << object_state_vector[3],
+                                  object_state_vector[4],
+                                  object_state_vector[5];
+    object_orientation_vector.push_back(current_object_orientation);
+
+    //store to publish afterwards
+    real_traj_to_publish.data.push_back(eef_pose(0));
+    real_traj_to_publish.data.push_back(eef_pose(1));
+    real_traj_to_publish.data.push_back(eef_pose(2));
+    real_traj_to_publish.data.push_back(object_state_vector[0]);
+    real_traj_to_publish.data.push_back(object_state_vector[1]);
+    real_traj_to_publish.data.push_back(object_state_vector[2]);
+
+    // publish current trajectory
+    if (real_traj_to_publish.data.size() > 0) {
+//        ROS_ERROR_STREAM("Traj feedback until WP " << nb_wp_reached);
+        traj_res_pub.publish(real_traj_to_publish);
+    }
+
+//    auto feedback_finish = std::chrono::high_resolution_clock::now();
+//    std::chrono::duration<double> feedback_elapsed = feedback_finish - feedback_t;
+//    ROS_ERROR_STREAM("Total feedback time: " << feedback_elapsed.count() << " seconds");
+
+//    ROS_ERROR_STREAM("Number of reached wp is: " << nb_wp_reached << "/" << waypoints.size());
+  }
+
+/**
  * @brief Plan and execute waypoint trajectory
  * @param b
 **/
@@ -401,8 +487,16 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
 
     boost::shared_ptr<moveit::planning_interface::MoveGroup> group = eef_values.get_move_group(arm_selected);
 
+    //    auto prev_finish = std::chrono::high_resolution_clock::now();
+    //    std::chrono::duration<double> prev_elapsed = prev_finish - prev;
+    //    ROS_ERROR_STREAM("Total prev time: " << prev_elapsed.count() << " seconds");
+
+    ////////////// MAKE PLAN
+//    auto traj_plan = std::chrono::high_resolution_clock::now();
+
     // initially use same orientation fot the whole traj
     geometry_msgs::Pose correct_orientation = eef_values.get_eef_pose(eef_selected);
+//    waypoints.insert(waypoints.begin(), correct_orientation);
     correct_orientation.orientation.w = 0.0;
     correct_orientation.orientation.x = 0.0;
     correct_orientation.orientation.y = 1;
@@ -435,13 +529,7 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
     pitch = eef_values.get_eef_rpy_orientation(eef_selected)(1);
     yaw = eef_values.get_eef_rpy_orientation(eef_selected)(2);
 
-//    auto prev_finish = std::chrono::high_resolution_clock::now();
-//    std::chrono::duration<double> prev_elapsed = prev_finish - prev;
-//    ROS_ERROR_STREAM("Total prev time: " << prev_elapsed.count() << " seconds");
-
-    ////////////// MAKE PLAN
-//    auto traj_plan = std::chrono::high_resolution_clock::now();
-    while(fraction < 1.0 && trials < 50){
+    while(fraction < 1.0 && trials < 50){ // if correct orientation is not feaseble, explore other ones
         ROS_WARN_STREAM("fraction is: " << fraction << " looking for orientations that will return complete path");
         pitch = pitch + step * pitch_counter;
         if (pitch > max_ang && sign > 0){
@@ -466,10 +554,11 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
             wp_itr->orientation = correct_orientation.orientation;
         }
 
-        fraction = group->computeCartesianPath(waypoints, 0.025, 0.0, robot_trajectory);
+        fraction = group->computeCartesianPath(waypoints, 0.01, 0, robot_trajectory);
         pitch_counter += 1;
         trials += 1;
     }
+    ROS_ERROR_STREAM("waypoints size is: " << waypoints.size());
 
     if (trials == 50){
         ROS_ERROR_STREAM("NOT solution found for trajectory");
@@ -490,134 +579,22 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
     }
     control_msgs::FollowJointTrajectoryGoal goal;
     goal.trajectory = robot_trajectory.joint_trajectory;
-    goal.goal_time_tolerance = ros::Duration(1.0);
-    ac.sendGoal(goal);
-    Eigen::Vector3d eef_pose;
-    std_msgs::Float64MultiArray real_traj_to_publish;
-    real_traj_to_publish.data.clear();
-    ROS_ERROR_STREAM("waypoints size is: " << waypoints.size());
+    goal.goal_time_tolerance = ros::Duration(0.5);
+    if (feedback_data)
+        ac.sendGoal(goal,
+                    boost::bind(doneCb, _1,
+                                boost::ref(traj_res_pub),
+                                boost::ref(eef_values),
+                                boost::ref(eef_selected)),
+                    actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>::SimpleActiveCallback(),
+                    actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>::SimpleFeedbackCallback());
+    else
+        ac.sendGoal(goal);
+    ac.waitForResult(goal.trajectory.points[goal.trajectory.points.size()-1].time_from_start + ros::Duration(5));
 
-//    auto exec_plan_finish = std::chrono::high_resolution_clock::now();
-//    std::chrono::duration<double> exec_plan_elapsed = exec_plan_finish - exec_plan;
-//    ROS_ERROR_STREAM("Total execution time: " << exec_plan_elapsed.count() << " seconds");
-
-    /////////////////// FEEDBACK
-//    auto feedback_t = std::chrono::high_resolution_clock::now();        
-    std::vector<Eigen::Vector3d> eef_position_vector;
-    std::vector<Eigen::Vector3d> eef_orientation_vector;
-    std::vector<Eigen::Vector3d> object_position_vector;
-    std::vector<Eigen::Vector3d> object_orientation_vector;
-
-    std::vector<double> object_state_vector;
-
-    int nb_wp_reached = 0;
-    if(fraction == 1){        
-
-        std::vector<double> curr_eff_position(3), expected_traj_position(3);
-        double curr_distance;
-        bool next_wp_reached;
-        bool timeOut = false;        
-        size_t nb_wp_to_reach = 0;
-        while (!ac.getState().isDone() && nb_wp_to_reach < waypoints.size()){
-            auto init_time = std::chrono::high_resolution_clock::now();
-
-            expected_traj_position[0] = waypoints[nb_wp_to_reach].position.x;
-            expected_traj_position[1] = waypoints[nb_wp_to_reach].position.y;
-            expected_traj_position[2] = waypoints[nb_wp_to_reach].position.z;
-
-            next_wp_reached = false;
-//            size_t tmp_counter = 0;
-            while (!timeOut && !next_wp_reached){
-                eef_pose = eef_values.get_eef_position(eef_selected);
-                curr_eff_position[0] = eef_pose(0);
-                curr_eff_position[1] = eef_pose(1);
-                curr_eff_position[2] = eef_pose(2);
-
-                curr_distance = largest_difference(curr_eff_position, expected_traj_position);
-//                ROS_ERROR_STREAM("Distance to WP: " << nb_wp_to_reach << " is " << curr_distance << " iteration " << tmp_counter);
-
-                if (curr_distance < 0.025){
-                    ROS_ERROR_STREAM("WP " << nb_wp_to_reach << " REACHED for feedback");
-                    // open/close gripper
-                    if (gripper_values.size() > 0){
-                        std::string curr_gripper_value = gripper_values[nb_wp_to_reach];
-                        baxter_kinematics::GripperAction srv;
-                        srv.request.eef_name = selected_eef;
-                        srv.request.action = curr_gripper_value; //curr_gripper_value_bool;
-                        if (gripper_client.call(srv))
-                            ROS_ERROR_STREAM("Set gripper value " << curr_gripper_value << " for wp " << nb_wp_to_reach);
-                        else
-                            ROS_ERROR("plan_and_execute_waypoint_traj - Failed to execute gripper action");
-                    }
-
-                    if(feedback_data){
-                        ROS_ERROR_STREAM("STORE/PUBLISH FEEDBACK");
-
-                        real_traj_to_publish.data.clear();
-
-                        //save eef values
-                        eef_pose = eef_values.get_eef_position(eef_selected);
-                        eef_position_vector.push_back(eef_pose);
-                        eef_orientation_vector.push_back(eef_values.get_eef_rpy_orientation(eef_selected));
-
-                        //save object values
-                        object_state_vector = eef_values.get_object_state_vector()[0];
-ROS_ERROR_STREAM("feedback_data: " << eef_values.get_object_state_vector()[0][0]);
-
-                        object_state_vector.push_back(0); // fake orientation
-                        object_state_vector.push_back(0);
-                        object_state_vector.push_back(0);
-
-                        Eigen::Vector3d current_object_position;
-                        current_object_position <<  object_state_vector[0],
-                                                    object_state_vector[1],
-                                                    object_state_vector[2];
-                        object_position_vector.push_back(current_object_position);
-
-                        Eigen::Vector3d current_object_orientation;
-                        current_object_orientation << object_state_vector[3],
-                                                      object_state_vector[4],
-                                                      object_state_vector[5];
-                        object_orientation_vector.push_back(current_object_orientation);
-
-                        //store to publish afterwards
-                        real_traj_to_publish.data.push_back(eef_pose(0));
-                        real_traj_to_publish.data.push_back(eef_pose(1));
-                        real_traj_to_publish.data.push_back(eef_pose(2));
-                        real_traj_to_publish.data.push_back(object_state_vector[0]);
-                        real_traj_to_publish.data.push_back(object_state_vector[1]);
-                        real_traj_to_publish.data.push_back(object_state_vector[2]);
-
-                        // publish current trajectory
-                        if (real_traj_to_publish.data.size() > 0) {
-                            ROS_ERROR_STREAM("Traj feedback until WP " << nb_wp_reached);
-                            traj_res_pub.publish(real_traj_to_publish);
-                        }
-                    }
-                    next_wp_reached = true;
-                    nb_wp_reached += 1;
-                } // if wp reached
-
-//                tmp_counter++;
-//                if (tmp_counter > 50000)
-//                    timeOut = true;
-                auto exec_time = std::chrono::high_resolution_clock::now();
-                std::chrono::duration<double> exec_elapsed = exec_time - init_time;
-                if (exec_elapsed.count() > 5)
-                    timeOut = true;
-            } // while
-
-            if (timeOut)
-                ROS_ERROR_STREAM(" WP " << nb_wp_to_reach << " NOT REACHED !!");
-            nb_wp_to_reach++;
-        } // external while
-    } // if fraction
-
-//    auto feedback_finish = std::chrono::high_resolution_clock::now();
-//    std::chrono::duration<double> feedback_elapsed = feedback_finish - feedback_t;
-//    ROS_ERROR_STREAM("Total feedback time: " << feedback_elapsed.count() << " seconds");
-
-    ROS_ERROR_STREAM("Number of reached wp is: " << nb_wp_reached << "/" << waypoints.size());
+    //    auto exec_plan_finish = std::chrono::high_resolution_clock::now();
+    //    std::chrono::duration<double> exec_plan_elapsed = exec_plan_finish - exec_plan;
+    //    ROS_ERROR_STREAM("Total execution time: " << exec_plan_elapsed.count() << " seconds");
 
     return 1;
 }
