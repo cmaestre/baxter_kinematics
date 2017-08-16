@@ -62,6 +62,14 @@ bool optimize_trajectory(std::vector<geometry_msgs::Pose>& vector_to_optimize,
                          double min_wp_dist);
 
 /**
+ * @brief Plan and execute to go to initial position
+ * @param b
+**/
+void goto_initial_position(std::string selected_eef,
+                           geometry_msgs::Pose& pose,
+                           Kinematic_values& eef_values);
+
+/**
  * @brief Plan and execute waypoint trajectory
  * @param b
 **/

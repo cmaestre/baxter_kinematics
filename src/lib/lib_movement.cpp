@@ -93,22 +93,29 @@ bool restart_robot_initial_position(Kinematic_values& eef_values,
     initial_pose.position.x = left_eef_initial_pos[0];
     initial_pose.position.y = left_eef_initial_pos[1];
     initial_pose.position.z = left_eef_initial_pos[2];
-
-    waypoints.clear();
-    waypoints.push_back(initial_pose);
+    initial_pose.orientation.w = 0.0;
+    initial_pose.orientation.x = 0.0;
+    initial_pose.orientation.y = 1.0;
+    initial_pose.orientation.z = 0.0;
     ROS_ERROR_STREAM("Left eef initial position :" << initial_pose.position.x << " " << initial_pose.position.y << " " << initial_pose.position.z);
 
-    bool left_res =
-            plan_and_execute_waypoint_traj("left",
-                                           waypoints,
-                                           ac_left,
-                                           eef_values,
-                                           nh,
-                                           false); // force_orien
-    if (!left_res){
-        ROS_ERROR_STREAM("restart_robot_initial_position : Failed executing left arm motion");
-        return false;
-    }
+//    waypoints.clear();
+//    waypoints.push_back(initial_pose);
+//    bool left_res =
+//            plan_and_execute_waypoint_traj("left",
+//                                           waypoints,
+//                                           ac_left,
+//                                           eef_values,
+//                                           nh,
+//                                           false); // force_orien
+//    if (!left_res){
+//        ROS_ERROR_STREAM("restart_robot_initial_position : Failed executing left arm motion");
+//        return false;
+//    }
+
+    goto_initial_position("left",
+                          initial_pose,
+                          eef_values);
 
     ////////////////////////////////////////////////////////////////////////
     // Right arm
@@ -127,21 +134,31 @@ bool restart_robot_initial_position(Kinematic_values& eef_values,
     initial_pose.position.x = right_eef_initial_pos[0];
     initial_pose.position.y = right_eef_initial_pos[1];
     initial_pose.position.z = right_eef_initial_pos[2];
-    waypoints.clear();
-    waypoints.push_back(initial_pose);
-    ROS_ERROR_STREAM("Right eef initial position : " << initial_pose.position.x << " " << initial_pose.position.y << " " << initial_pose.position.z);
-    bool right_res =
-            plan_and_execute_waypoint_traj("right",
-                                           waypoints,
-                                           ac_right,
-                                           eef_values,
-                                           nh,
-                                           false); // force_orien
+    initial_pose.orientation.w = 0.0;
+    initial_pose.orientation.x = 0.0;
+    initial_pose.orientation.y = 1.0;
+    initial_pose.orientation.z = 0.0;
+    ROS_ERROR_STREAM("Right eef initial position :" << initial_pose.position.x << " " << initial_pose.position.y << " " << initial_pose.position.z);
 
-    if (!right_res){
-        ROS_ERROR_STREAM("restart_robot_initial_position : Failed executing right arm motion");
-        return false;
-    }
+    goto_initial_position("right",
+                          initial_pose,
+                          eef_values);
+
+//    waypoints.clear();
+//    waypoints.push_back(initial_pose);
+//    ROS_ERROR_STREAM("Right eef initial position : " << initial_pose.position.x << " " << initial_pose.position.y << " " << initial_pose.position.z);
+//    bool right_res =
+//            plan_and_execute_waypoint_traj("right",
+//                                           waypoints,
+//                                           ac_right,
+//                                           eef_values,
+//                                           nh,
+//                                           false); // force_orien
+
+//    if (!right_res){
+//        ROS_ERROR_STREAM("restart_robot_initial_position : Failed executing right arm motion");
+//        return false;
+//    }
 
     return true;
 }
@@ -442,6 +459,29 @@ void doneCb(const actionlib::SimpleClientGoalState& state,
 //    ROS_ERROR_STREAM("Number of reached wp is: " << nb_wp_reached << "/" << waypoints.size());
   }
 
+void goto_initial_position(std::string selected_eef,
+                           geometry_msgs::Pose& pose,
+                           Kinematic_values& eef_values){
+
+    //the move group to move the selected arm to interact with the object as well as to derive it back home
+    std::string arm_selected, eef_selected;
+    if (strcmp(selected_eef.c_str(), "right") == 0){
+        arm_selected = "right_arm";
+        eef_selected = "right_gripper";
+    }
+    else{
+        arm_selected = "left_arm";
+        eef_selected = "left_gripper";
+    }
+
+    boost::shared_ptr<moveit::planning_interface::MoveGroup> group = eef_values.get_move_group(arm_selected);
+    group->setPoseTarget(pose);
+    moveit::planning_interface::MoveGroup::Plan plan;
+    group->plan(plan);
+    group->execute(plan);
+
+}
+
 /**
  * @brief Plan and execute waypoint trajectory
  * @param b
@@ -579,7 +619,7 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
     }
     control_msgs::FollowJointTrajectoryGoal goal;
     goal.trajectory = robot_trajectory.joint_trajectory;
-    goal.goal_time_tolerance = ros::Duration(0.5);
+    goal.goal_time_tolerance = ros::Duration(0);
     if (feedback_data)
         ac.sendGoal(goal,
                     boost::bind(doneCb, _1,
@@ -590,7 +630,7 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
                     actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>::SimpleFeedbackCallback());
     else
         ac.sendGoal(goal);
-    ac.waitForResult(goal.trajectory.points[goal.trajectory.points.size()-1].time_from_start + ros::Duration(5));
+    ac.waitForResult(goal.trajectory.points[goal.trajectory.points.size()-1].time_from_start + ros::Duration(2));
 
     //    auto exec_plan_finish = std::chrono::high_resolution_clock::now();
     //    std::chrono::duration<double> exec_plan_elapsed = exec_plan_finish - exec_plan;
