@@ -2,15 +2,15 @@
 <launch>
 
   <node name="joint_interface" pkg="baxter_interface" type="joint_trajectory_action_server.py" output="screen"/>
-  <include file="$(find baxter_kinematics)/launch/move_group_mimick_node.launch" />
-  <!--include file="$(find baxter_moveit_config)/launch/baxter_grippers.launch" /-->
+  <!--include file="$(find baxter_kinematics)/launch/move_group_mimick_node.launch" /-->
+  <include file="$(find baxter_moveit_config)/launch/baxter_grippers.launch" />
 
   <rosparam command="load" file="$(find baxter_kinematics)/src/parameters.yaml" />
 
   <!-- Simulation and Real robot-->
   <node name="move_to_position_node" pkg="baxter_kinematics" type="move_to_position_service" output="screen" args="joint_states:=/robot/joint_states" />
 
-  <node name="execute_trajectory_node" pkg="baxter_kinematics" type="execute_trajectory_service" output="screen" args="joint_states:=/robot/joint_states"/>
+  <node name="execute_trajectory_node" pkg="baxter_kinematics" type="execute_trajectory_service" output="screen" args="joint_states:=/robot/joint_states" launch-prefix="xterm -e gdb --args"/>
 
   <node name="restart_robot_node" pkg="baxter_kinematics" type="restart_robot_service" output="screen" args="joint_states:=/robot/joint_states" />
 

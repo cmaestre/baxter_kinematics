@@ -59,7 +59,7 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
 
     int curr_iter = 0;
     bool found = false;
-    while (!found and curr_iter < 5){
+    while (!found && curr_iter < 5){
         ROS_INFO("Load robot description");
         // set arm
         std::string left_arm = "left_arm";
@@ -86,32 +86,17 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
         geometry_msgs::Pose start_pose = eef_values.get_eef_pose(gripper);
         ROS_ERROR_STREAM("eef orientation is: " << start_pose);
 
-//        // get trajectory
-//        std::vector<double> received_traj_vector = req.trajectory;
-//        std::vector<geometry_msgs::Pose> waypoints;
-//        for (std::size_t i=0; i<received_traj_vector.size(); i=i+3){
-//            start_pose.position.x = received_traj_vector[i];
-//            start_pose.position.y = received_traj_vector[i+1];
-//            start_pose.position.z = received_traj_vector[i+2];
-//            waypoints.push_back(start_pose);
-//            ROS_ERROR_STREAM(start_pose.position.x << " " << start_pose.position.y << " " << start_pose.position.z);
-//        }
-//        usleep(1e4);
-
-        // Get init pos
-        std::vector<Eigen::Vector3d> mid_point_position_vector(4);
-        Eigen::Vector3d init_pos;
-        init_pos << req.trajectory[0],
-                    req.trajectory[1],
-                    req.trajectory[2];
-
-        std::string temp_side = "no_side"; //eef_values.get_cube_side_value(4); //NO_SIDE
-        std::vector<geometry_msgs::Pose> waypoints =
-            compute_directed_waypoints(true,
-                                       init_pos, // goal
-                                       temp_side,
-                                       mid_point_position_vector,
-                                       eef_values);
+        // get trajectory
+        std::vector<double> received_traj_vector = req.trajectory;
+        std::vector<geometry_msgs::Pose> waypoints;
+        for (std::size_t i=0; i<received_traj_vector.size(); i=i+3){
+            start_pose.position.x = received_traj_vector[i];
+            start_pose.position.y = received_traj_vector[i+1];
+            start_pose.position.z = received_traj_vector[i+2];
+            waypoints.push_back(start_pose);
+            ROS_ERROR_STREAM(start_pose.position.x << " " << start_pose.position.y << " " << start_pose.position.z);
+        }
+        usleep(1e4);
 
         // move arms
         auto exec_start = std::chrono::high_resolution_clock::now();
