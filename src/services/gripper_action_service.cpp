@@ -46,18 +46,18 @@ bool gripper_action(baxter_kinematics::GripperAction::Request &req,
     baxter_core_msgs::EndEffectorCommand gripperMsg;
     double curr_openness;
     if(strcmp(req.action.c_str(), "open") == 0)
-        gripperMsg.args = "{position: 100.0}";
+        gripperMsg.args = "{\"position\": 100.0}";
     else if(strcmp(req.action.c_str(), "open_slow") == 0){
         curr_openness = eef_values.get_gripper_openness(eef_name);
-        gripperMsg.args = "{position: " + std::to_string(curr_openness + 3) + "}";
+        gripperMsg.args = "{\"position\": " + std::to_string(curr_openness + 10) + "}";
     }
     else if(strcmp(req.action.c_str(), "middle") == 0)
-        gripperMsg.args = "{position: 50.0}";
+        gripperMsg.args = "{\"position\": 50.0}";
     else if(strcmp(req.action.c_str(), "close") == 0)
-        gripperMsg.args = "{position: 0.0}";
+        gripperMsg.args = "{\"position\": 0.0}";
     else if(strcmp(req.action.c_str(), "close_slow") == 0){
         curr_openness = eef_values.get_gripper_openness(eef_name);
-        gripperMsg.args = "{position: " + std::to_string(curr_openness - 3) + "}";
+        gripperMsg.args = "{\"position\": " + std::to_string(curr_openness - 10) + "}";
     }    
     else{
         ROS_ERROR("gripper_action - please specify in service request, open, open_slow, close or close_slow command");
@@ -68,6 +68,7 @@ bool gripper_action(baxter_kinematics::GripperAction::Request &req,
     gripperMsg.id = 65538;
     current_pub.publish(gripperMsg);
 
+    res.success = true;
     ROS_INFO("Done!");
     return true;
 }

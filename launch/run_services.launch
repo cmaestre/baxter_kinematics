@@ -10,7 +10,7 @@
   <!-- Simulation and Real robot-->
   <node name="move_to_position_node" pkg="baxter_kinematics" type="move_to_position_service" output="screen" args="joint_states:=/robot/joint_states" />
 
-  <node name="execute_trajectory_node" pkg="baxter_kinematics" type="execute_trajectory_service" output="screen" args="joint_states:=/robot/joint_states" launch-prefix="xterm -e gdb --args"/>
+  <node name="execute_trajectory_node" pkg="baxter_kinematics" type="execute_trajectory_service" output="screen" args="joint_states:=/robot/joint_states"/>
 
   <node name="restart_robot_node" pkg="baxter_kinematics" type="restart_robot_service" output="screen" args="joint_states:=/robot/joint_states" />
 
