@@ -17,11 +17,13 @@ Baxter SDK : http://sdk.rethinkrobotics.com/wiki/Workstation_Setup
 ## Install :
 git clone https://github.com/cmaestre/baxter_kinematics.git 
 
-## Run (with the real robot switched on or a simulated environment loaded, as with roslaunch baxter_gazebo baxter_world.launch):
-
+## Run 
+### With the real robot switched on
 roslaunch baxter_kinematics run_services.launch
 
-(In simulation) roslaunch baxter_kinematics run_services.launch real_baxter:=false
+### With a simulated environment loaded
+roslaunch baxter_gazebo baxter_world.launch
+roslaunch baxter_kinematics run_services.launch real_baxter:=false
 
 ## Check :
 
@@ -50,16 +52,16 @@ gripper_values: []
 feedback: false"
 
 ### Example of moving the left eef with feedback to be improved:
-Listening to eef feedback:
+#### Listening to eef feedback:
 rostopic echo /baxter_kinematics/traj_exec_info
 
-Trajectory with feedback (only indicating the last waypiint reached):
+#### Trajectory with feedback (only indicating the last waypiint reached):
 rosservice call /baxter_kinematics/execute_trajectory "eef_name: 'left'
 trajectory: [0.65, 0.1, 0, 0.55, -0.3, -0.05, 0.75, 0, 0.3]
 gripper_values: []
 feedback: true"
 
-Expected feedback (do not take -999.0 into account):
+#### Expected feedback (do not take -999.0 into account):
 ---
 layout: 
   dim: []
@@ -68,19 +70,19 @@ data: [0.7499918674594362, 0.00021892203344442827, 0.29978400359396273, -999.0, 
 
 ### Grasping:
 
-First, calibrate the Baxter grippers
+#### First, calibrate the Baxter grippers
 rosrun baxter_examples gripper_keyboard.py
 
-Then push C and c
+#### Then push C and c
 
-Let's get the current state (openness is 0, therefore its closed):
+#### Let's get the current state (openness is 0, therefore its closed):
 rosservice call /baxter_kinematics/get_gripper_openness "eef_name: 'left'"
 
-Let's open it a little bit:
+#### Let's open it a little bit:
 rosservice call /baxter_kinematics/gripper_action "eef_name: 'left'
 action: 'open_slow'"
 
-Now fully open (openness is 100):
+#### Now fully open (openness is 100):
 rosservice call /baxter_kinematics/gripper_action "eef_name: 'left'
 action: 'open'"
 
