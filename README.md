@@ -85,5 +85,5 @@ Now fully open (openness is 1):
 rosservice call /baxter_kinematics/gripper_action "eef_name: 'left'
 action: 'open'"
 
-rosservice call /baxter_kinematics/get_gripper_openness "eef_name: 'left'" 
+rosservice call /baxter_kinematics/get_gripper_openness "eef_name: 'left'"
 openness: 99.9999008179
