@@ -4,10 +4,20 @@ Services for the Baxter robot (both the physical one and in simulation)
 
 # How to
 
-## Install :
-git clone https://github.com/cmaestre/baxter_kinematics.git
+## Dependencies (using Ubuntu 14.04 LTS)
 
-## Run :
+Ros Indigo : http://wiki.ros.org/indigo/Installation/Ubuntu
+
+MoveIt! : http://moveit.ros.org/install/
+
+Baxter SDK : http://sdk.rethinkrobotics.com/wiki/Workstation_Setup
+
+(To run in Gazebo) Baxter model in Gazebo : http://sdk.rethinkrobotics.com/wiki/Simulator_Installation
+
+## Install :
+git clone https://github.com/cmaestre/baxter_kinematics.git 
+
+## Run (with the real robot switched on or a simulated environment loaded, as with roslaunch baxter_gazebo baxter_world.launch):
 
 roslaunch baxter_kinematics run_services.launch
 
@@ -21,7 +31,6 @@ rosservice list | grep baxter_kinematics
 
 /baxter_kinematics/execute_trajectory
 /baxter_kinematics/get_gripper_openness
-/baxter_kinematics/get_sim_eef_pose
 /baxter_kinematics/gripper_action
 /baxter_kinematics/move_to_position
 /baxter_kinematics/restart_robot
@@ -34,37 +43,28 @@ rosservice call /baxter_kinematics/restart_robot
 ### Remove right eef from table (to avoid collisions):
 rosservice call /baxter_kinematics/move_to_position "{eef_name: 'right', x: 0.3, y: -0.6, z: 0.0, force_orien: false}"
 
-### Example of moving the left eef (without feedback):
+### Example of moving the left eef without feedback:
 rosservice call /baxter_kinematics/execute_trajectory "eef_name: 'left'
 trajectory: [0.65, 0, 0, 0.45, 0.3, 0.2, 0.75, -0.3, -0.05]
 gripper_values: []
 feedback: false"
 
-### Listening to eef feedback:
+### Example of moving the left eef with feedback to be improved:
+Listening to eef feedback:
 rostopic echo /baxter_kinematics/traj_exec_info
 
-Trajectory with feedback:
+Trajectory with feedback (only indicating the last waypiint reached):
 rosservice call /baxter_kinematics/execute_trajectory "eef_name: 'left'
 trajectory: [0.65, 0.1, 0, 0.55, -0.3, -0.05, 0.75, 0, 0.3]
 gripper_values: []
 feedback: true"
 
 Expected feedback (do not take -999.0 into account):
-layout: 
-layout: 
-  dim: []
-  data_offset: 0
-data: [0.6515854514016458, 0.09877138311717786, 0.004028279026203119, -999.0, -999.0, -999.0]
 ---
 layout: 
   dim: []
   data_offset: 0
-data: [0.550353361504443, -0.29696188867351775, -0.04954377515473407, -999.0, -999.0, -999.0]
----
-layout: 
-  dim: []
-  data_offset: 0
-data: [0.7478432800149526, -0.0026350589180668196, 0.2962306155197778, -999.0, -999.0, -999.0]
+data: [0.7499918674594362, 0.00021892203344442827, 0.29978400359396273, -999.0, -999.0, -999.0]
 
 ### Grasping:
 
