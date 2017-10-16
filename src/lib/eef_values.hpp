@@ -22,9 +22,9 @@
 
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PointStamped.h>
-//#include "environment_functionalities/GetObjectState.h"
-//#include "visual_functionalities/GetObjectStateBlob.h"
-//#include "pcl_tracking/ObjectPosition.h"
+#include "environment_functionalities/GetObjectState.h"
+#include "visual_functionalities/GetObjectStateBlob.h"
+#include "pcl_tracking/ObjectPosition.h"
 
 #include <chrono>  // for high_resolution_clock
 
@@ -45,7 +45,7 @@ struct Eef_values {
     ros::ServiceClient client_get_object_pose;
     std::string visual_type;
 
-//    std::vector< std::vector<double> > obj_pos_vector;
+    std::vector< std::vector<double> > obj_pos_vector;
 
 };
 
@@ -60,6 +60,9 @@ public:
         eef_values.move_group_left_pt_->setPlannerId("RRTConnectkConfigDefault");
         eef_values.move_group_right_pt_.reset(new moveit::planning_interface::MoveGroup("right_arm"));
         eef_values.move_group_right_pt_->setPlannerId("RRTConnectkConfigDefault");
+
+        std::vector< double> obj_pos = {-999.0, -999.0, -999.0};
+        eef_values.obj_pos_vector.push_back(obj_pos);
     }
 
     std::string& get_baxter_arm(){
@@ -76,13 +79,13 @@ public:
             return eef_values.move_group_right_pt_;
     }
 
-//    std::vector< std::vector<double> > get_object_state_vector(){
-//        return eef_values.obj_pos_vector;
-//    }
+    std::vector< std::vector<double> > get_object_state_vector(){
+        return eef_values.obj_pos_vector;
+    }
 
-//    void set_object_state_vector(std::vector< std::vector<double> > obj_pos_vector_){
-//        eef_values.obj_pos_vector = obj_pos_vector_;
-//    }
+    void set_object_state_vector(std::vector< std::vector<double> > obj_pos_vector_){
+        eef_values.obj_pos_vector = obj_pos_vector_;
+    }
 
 
     Eigen::VectorXd& get_eef_rpy_pose(const std::string gripper){
