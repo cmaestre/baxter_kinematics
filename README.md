@@ -23,6 +23,7 @@ roslaunch baxter_kinematics run_services.launch
 
 ### With a simulated environment loaded
 roslaunch baxter_gazebo baxter_world.launch
+
 roslaunch baxter_kinematics run_services.launch real_baxter:=false
 
 ## Check :
