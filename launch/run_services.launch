@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <launch>
 
+  <arg name="real_robot" default="true"/>
+  <param name="real_robot" value="$(arg real_robot)"/>
+
+ <!--  <arg name="obj_feedback" default="true"/>
+  <param name="obj_feedback" value="$(arg obj_feedback)"/> -->
+
   <node name="joint_interface" pkg="baxter_interface" type="joint_trajectory_action_server.py" output="screen"/>
   <!--include file="$(find baxter_kinematics)/launch/move_group_mimick_node.launch" /-->
   <include file="$(find baxter_moveit_config)/launch/baxter_grippers.launch" />
@@ -10,8 +16,6 @@
   <!-- Simulation and Real robot-->
   <node name="move_to_position_node" pkg="baxter_kinematics" type="move_to_position_service" output="screen" args="joint_states:=/robot/joint_states" />
 
-  <node name="execute_trajectory_node" pkg="baxter_kinematics" type="execute_trajectory_service" output="screen" args="joint_states:=/robot/joint_states"/>
-
   <node name="restart_robot_node" pkg="baxter_kinematics" type="restart_robot_service" output="screen" args="joint_states:=/robot/joint_states" />
 
   <node name="get_sim_eef_pose_node" pkg="baxter_kinematics" type="get_sim_eef_pose_service" output="screen" args="joint_states:=/robot/joint_states" />
@@ -19,5 +23,7 @@
   <node name="gripper_action_node" pkg="baxter_kinematics" type="gripper_action_service" output="screen" args="joint_states:=/robot/joint_states" />
 
   <node name="get_gripper_state_node" pkg="baxter_kinematics" type="get_gripper_state_service" output="screen" args="joint_states:=/robot/joint_states" />
+
+  <node name="execute_trajectory_node" pkg="baxter_kinematics" type="execute_trajectory_service" output="screen" args="joint_states:=/robot/joint_states"/>  
 
 </launch>

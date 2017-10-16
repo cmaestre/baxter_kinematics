@@ -20,25 +20,25 @@ void right_eef_Callback(const baxter_core_msgs::EndpointState::ConstPtr&  r_eef_
     locate_eef_pose(r_eef_feedback->pose, eef_values, "right_gripper");
 }
 
-//store obj pos vector in eef values
-void obj_state_cloud_Callback(const pcl_tracking::ObjectPosition::ConstPtr& topic_message,
-                              Kinematic_values& eef_values){
-    std::vector< geometry_msgs::PointStamped > raw_pos_vector = topic_message->object_position;
-    std::vector< std::vector<double> > obj_pos_vector(raw_pos_vector.size(), std::vector<double>(3));
-    std::vector<double> curr_obj_pos;
-    geometry_msgs::PointStamped curr_raw_obj;
-    for(int i=0; i < raw_pos_vector.size(); i++){
-        curr_raw_obj = raw_pos_vector[i];
-        curr_obj_pos.push_back(curr_raw_obj.point.x);
-        curr_obj_pos.push_back(curr_raw_obj.point.y);
-        curr_obj_pos.push_back(curr_raw_obj.point.z);
-//        obj_pos_vector.insert(int(curr_raw_obj.header.seq), curr_obj_pos);
-        obj_pos_vector.push_back(curr_obj_pos);
-//        ROS_ERROR_STREAM("obj_state_cloud_Callback : obj_state_cloud_Callback: " << curr_obj_pos[0] << " " << curr_obj_pos[1] << " " << curr_obj_pos[2]);
-    }
+////store obj pos vector in eef values
+//void obj_state_cloud_Callback(const pcl_tracking::ObjectPosition::ConstPtr& topic_message,
+//                              Kinematic_values& eef_values){
+//    std::vector< geometry_msgs::PointStamped > raw_pos_vector = topic_message->object_position;
+//    std::vector< std::vector<double> > obj_pos_vector(raw_pos_vector.size(), std::vector<double>(3));
+//    std::vector<double> curr_obj_pos;
+//    geometry_msgs::PointStamped curr_raw_obj;
+//    for(int i=0; i < raw_pos_vector.size(); i++){
+//        curr_raw_obj = raw_pos_vector[i];
+//        curr_obj_pos.push_back(curr_raw_obj.point.x);
+//        curr_obj_pos.push_back(curr_raw_obj.point.y);
+//        curr_obj_pos.push_back(curr_raw_obj.point.z);
+////        obj_pos_vector.insert(int(curr_raw_obj.header.seq), curr_obj_pos);
+//        obj_pos_vector.push_back(curr_obj_pos);
+////        ROS_ERROR_STREAM("obj_state_cloud_Callback : obj_state_cloud_Callback: " << curr_obj_pos[0] << " " << curr_obj_pos[1] << " " << curr_obj_pos[2]);
+//    }
 
-    eef_values.set_object_state_vector(obj_pos_vector);
-}
+//    eef_values.set_object_state_vector(obj_pos_vector);
+//}
 
 bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
                           baxter_kinematics::Trajectory::Response &res,
@@ -165,13 +165,13 @@ int main(int argc, char **argv)
                                                                                   boost::bind(left_eef_Callback, _1, boost::ref(eef_values)));
     ros::Subscriber sub_r_eef_msg = nh.subscribe<baxter_core_msgs::EndpointState>("/robot/limb/right/endpoint_state", 10,
                                                                                   boost::bind(right_eef_Callback, _1, boost::ref(eef_values)));
-    std::string topic_name;
-    bool real_robot;
-    nh.getParam("real_robot", real_robot);
-    if (real_robot)
-        topic_name = "/visual/obj_pos_vector";
-    ros::Subscriber sub_obj_state = nh.subscribe<pcl_tracking::ObjectPosition>(topic_name, 1,
-                                                                                  boost::bind(obj_state_cloud_Callback, _1, boost::ref(eef_values)));
+//    std::string topic_name;
+//    bool real_robot;
+//    nh.getParam("real_robot", real_robot);
+//    if (real_robot)
+//        topic_name = "/visual/obj_pos_vector";
+//    ros::Subscriber sub_obj_state = nh.subscribe<pcl_tracking::ObjectPosition>(topic_name, 1,
+//                                                                                  boost::bind(obj_state_cloud_Callback, _1, boost::ref(eef_values)));
 
     actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> ac_l("/robot/limb/left/follow_joint_trajectory", true);
     actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> ac_r("/robot/limb/right/follow_joint_trajectory", true);
