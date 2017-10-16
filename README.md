@@ -75,15 +75,13 @@ Then push C and c
 
 Let's get the current state (openness is 0, therefore its closed):
 rosservice call /baxter_kinematics/get_gripper_openness "eef_name: 'left'"
-openness: -3.73201942239e-07
 
 Let's open it a little bit:
 rosservice call /baxter_kinematics/gripper_action "eef_name: 'left'
 action: 'open_slow'"
 
-Now fully open (openness is 1):
+Now fully open (openness is 100):
 rosservice call /baxter_kinematics/gripper_action "eef_name: 'left'
 action: 'open'"
 
 rosservice call /baxter_kinematics/get_gripper_openness "eef_name: 'left'"
-openness: 99.9999008179
