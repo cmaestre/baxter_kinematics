@@ -33,9 +33,13 @@ TIP!! When calling a service from a terminal, write the name (i.e. rosservice ca
 rosservice list | grep baxter_kinematics
 
 /baxter_kinematics/execute_trajectory
+
 /baxter_kinematics/get_gripper_openness
+
 /baxter_kinematics/gripper_action
+
 /baxter_kinematics/move_to_position
+
 /baxter_kinematics/restart_robot
 
 ## Services (some examples) :
@@ -56,14 +60,13 @@ feedback: false"
 #### Listening to eef feedback:
 rostopic echo /baxter_kinematics/traj_exec_info
 
-#### Trajectory with feedback (only indicating the last waypiint reached):
+#### Trajectory with feedback (only indicating the last waypoint reached):
 rosservice call /baxter_kinematics/execute_trajectory "eef_name: 'left'
 trajectory: [0.65, 0.1, 0, 0.55, -0.3, -0.05, 0.75, 0, 0.3]
 gripper_values: []
 feedback: true"
 
 #### Expected feedback (do not take -999.0 into account):
----
 layout: 
   dim: []
   data_offset: 0
