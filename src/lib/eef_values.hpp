@@ -9,6 +9,7 @@
 #include <actionlib/client/simple_action_client.h>
 #include <std_msgs/Float64MultiArray.h>
 #include <std_msgs/Empty.h>
+#include <ros/transport_hints.h>
 
 #include <baxter_core_msgs/EndpointState.h>
 #include <baxter_kinematics/GripperAction.h>
@@ -25,6 +26,7 @@
 #include "environment_functionalities/GetObjectState.h"
 #include "visual_functionalities/GetObjectStateBlob.h"
 #include "pcl_tracking/ObjectPosition.h"
+#include "baxter_kinematics/TrajectoryTopic.h"
 
 #include <chrono>  // for high_resolution_clock
 

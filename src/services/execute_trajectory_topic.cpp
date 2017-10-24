@@ -40,16 +40,13 @@ void obj_state_cloud_Callback(const pcl_tracking::ObjectPosition::ConstPtr& topi
     eef_values.set_object_state_vector(obj_pos_vector);
 }
 
-bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
-                          baxter_kinematics::Trajectory::Response &res,
+void execute_traj_Callback(const baxter_kinematics::TrajectoryTopic::ConstPtr& topic_message,
                           ros::NodeHandle& nh,
                           actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>& ac_left,
                           actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>& ac_right,
                           ros::Publisher& traj_res_pub,
                           ros::ServiceClient& gripper_client,
                           Kinematic_values& eef_values){
-
-    ROS_INFO("Establish communication tools");
     // Record start time
     auto start = std::chrono::high_resolution_clock::now();
 
@@ -57,6 +54,13 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
     ros::AsyncSpinner spinner (1);
     spinner.start();
 
+    // read message
+    std::string eef_name = topic_message->eef_name;
+    bool feedback = topic_message->feedback;
+    std::vector<double> received_traj_vector = topic_message->trajectory;
+    std::vector<std::string> gripper_values_vector = topic_message->gripper_values;
+
+    bool success;
     int curr_iter = 0;
     bool found = false;
     while (!found && curr_iter < 5){
@@ -64,30 +68,27 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
         // set arm
         std::string left_arm = "left_arm";
         std::string right_arm = "right_arm";
-        if(strcmp(req.eef_name.c_str(), "left") == 0)
+        if(strcmp(eef_name.c_str(), "left") == 0)
             eef_values.set_baxter_arm(left_arm);
-        else if(strcmp(req.eef_name.c_str(), "right") == 0)
+        else if(strcmp(eef_name.c_str(), "right") == 0)
             eef_values.set_baxter_arm(right_arm);
         else{
-            ROS_ERROR("please specify in service request, left or right arm");
-            return false;
+            ROS_ERROR("please specify in message request, left or right arm");
         }
 
         // get initial pose orientation
         std::string gripper;
-        if(strcmp(req.eef_name.c_str(), "left") == 0)
+        if(strcmp(eef_name.c_str(), "left") == 0)
             gripper = "left_gripper";
-        else if(strcmp(req.eef_name.c_str(), "right") == 0)
+        else if(strcmp(eef_name.c_str(), "right") == 0)
             gripper = "right_gripper";
         else{
-            ROS_ERROR("please specify in service request, left or right arm");
-            return false;
+            ROS_ERROR("please specify in message request, left or right arm");
         }
         geometry_msgs::Pose start_pose = eef_values.get_eef_pose(gripper);
         ROS_ERROR_STREAM("eef orientation is: " << start_pose);
 
         // get trajectory
-        std::vector<double> received_traj_vector = req.trajectory;
         std::vector<geometry_msgs::Pose> waypoints;
         for (std::size_t i=0; i<received_traj_vector.size(); i=i+3){
             start_pose.position.x = received_traj_vector[i];
@@ -101,40 +102,38 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
         // move arms
         auto exec_start = std::chrono::high_resolution_clock::now();
 
-        std::vector<std::string> gripper_values_vector = req.gripper_values;
         int traj_res;
-        if(strcmp(req.eef_name.c_str(), "left") == 0)
+        if(strcmp(eef_name.c_str(), "left") == 0)
             traj_res = plan_and_execute_waypoint_traj("left",
                                                       waypoints,
                                                       ac_left,
                                                       eef_values,
                                                       nh,
                                                       false, // force_orien
-                                                      req.feedback,
+                                                      feedback,
                                                       traj_res_pub,
                                                       "cube", //for feedback
                                                       gripper_values_vector,
                                                       gripper_client);
-        else if(strcmp(req.eef_name.c_str(), "right") == 0)
+        else if(strcmp(eef_name.c_str(), "right") == 0)
             traj_res = plan_and_execute_waypoint_traj("right",
                                                       waypoints,
                                                       ac_right,
                                                       eef_values,
                                                       nh,
                                                       false, // force_orien
-                                                      req.feedback,
+                                                      feedback,
                                                       traj_res_pub,
                                                       "cube", //for feedback
                                                       gripper_values_vector,
                                                       gripper_client);
         else{
-            ROS_ERROR("please specify in service request, left or right arm");
-            return false;
+            ROS_ERROR("please specify in message request, left or right arm");
         }
         if (curr_iter == 3 or traj_res == 0)
-            res.success = false;
+            success = false;
         else if (traj_res == 1){
-            res.success = true;
+            success = true;
             found = true;
         }
         else if (traj_res == 2)
@@ -146,18 +145,17 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
         ROS_ERROR_STREAM("Execution elapsed time: " << exec_elapsed.count() << " seconds");
     }
 
+    ROS_INFO_STREAM("Trajectory execution success : " << success);
     ROS_INFO("Done!\n");
     // Record end time
     auto finish = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = finish - start;
     ROS_ERROR_STREAM("Total elapsed time: " << elapsed.count() << " seconds");
-
-    return true;
 }
 
 int main(int argc, char **argv)
 {
-    ros::init(argc, argv, "execute_trajectory_node");
+    ros::init(argc, argv, "execute_trajectory_topic_node");
     ros::NodeHandle nh;
     Kinematic_values eef_values;
 
@@ -165,13 +163,13 @@ int main(int argc, char **argv)
                                                                                   boost::bind(left_eef_Callback, _1, boost::ref(eef_values)));
     ros::Subscriber sub_r_eef_msg = nh.subscribe<baxter_core_msgs::EndpointState>("/robot/limb/right/endpoint_state", 10,
                                                                                   boost::bind(right_eef_Callback, _1, boost::ref(eef_values)));
-    std::string topic_name;
+    std::string obj_pos_topic_name;
     bool real_robot;
     nh.getParam("real_robot", real_robot);
     if (real_robot)
-        topic_name = "/visual/obj_pos_vector";
-    ros::Subscriber sub_obj_state = nh.subscribe<pcl_tracking::ObjectPosition>(topic_name, 1,
-                                                                                  boost::bind(obj_state_cloud_Callback, _1, boost::ref(eef_values)));
+        obj_pos_topic_name = "/visual/obj_pos_vector";
+    ros::Subscriber sub_obj_state = nh.subscribe<pcl_tracking::ObjectPosition>(obj_pos_topic_name, 1,
+                                                                               boost::bind(obj_state_cloud_Callback, _1, boost::ref(eef_values)));
 
     actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> ac_l("/robot/limb/left/follow_joint_trajectory", true);
     actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> ac_r("/robot/limb/right/follow_joint_trajectory", true);
@@ -180,15 +178,17 @@ int main(int argc, char **argv)
     nh.getParam("feedback_topic", feedback_topic_name);
     ros::Publisher traj_res_pub = nh.advertise<std_msgs::Float64MultiArray>(feedback_topic_name, 1);
 
-    ros::ServiceServer service = nh.advertiseService<
-            baxter_kinematics::Trajectory::Request,
-            baxter_kinematics::Trajectory::Response>("baxter_kinematics/execute_trajectory", boost::bind(trajectory_execution, _1, _2, nh,
-                                                                                                    boost::ref(ac_l),
-                                                                                                    boost::ref(ac_r),
-                                                                                                    boost::ref(traj_res_pub),
-                                                                                                    boost::ref(gripper_client),
-                                                                                                    boost::ref(eef_values)));
-    ROS_INFO("Ready to execute trajectory (service).");
+    std::string execute_topic_name;
+    nh.getParam("execute_traj_topic", execute_topic_name);
+    ros::Subscriber traj_exec_msg = nh.subscribe<baxter_kinematics::TrajectoryTopic>(execute_topic_name, 100,
+                                                                               boost::bind(execute_traj_Callback, _1,
+                                                                                           boost::ref(nh),
+                                                                                           boost::ref(ac_l),
+                                                                                           boost::ref(ac_r),
+                                                                                           boost::ref(traj_res_pub),
+                                                                                           boost::ref(gripper_client),
+                                                                                           boost::ref(eef_values)));
+    ROS_INFO("Ready to execute trajectory (topic).");
     ros::spin();
 
     return 0;

@@ -21,6 +21,11 @@ find_package(Boost REQUIRED COMPONENTS system )
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -fPIC")
 
+add_message_files(
+  FILES
+  TrajectoryTopic.msg  
+)
+
 add_service_files(
   FILES
   GetEefPose.srv
@@ -55,6 +60,9 @@ target_link_libraries(move_to_position_service ${catkin_LIBRARIES} ${Eigen_LIBRA
 
 add_executable(execute_trajectory_service src/services/execute_trajectory_service.cpp ${all_sources})
 target_link_libraries(execute_trajectory_service ${catkin_LIBRARIES} ${Eigen_LIBRARIES})
+
+add_executable(execute_trajectory_topic src/services/execute_trajectory_topic.cpp ${all_sources})
+target_link_libraries(execute_trajectory_topic ${catkin_LIBRARIES} ${Eigen_LIBRARIES})
 
 add_executable(restart_robot_service src/services/restart_robot_service.cpp ${all_sources})
 target_link_libraries(restart_robot_service ${catkin_LIBRARIES} ${Eigen_LIBRARIES})

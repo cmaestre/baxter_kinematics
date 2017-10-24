@@ -26,4 +26,6 @@
 
   <node name="execute_trajectory_node" pkg="baxter_kinematics" type="execute_trajectory_service" output="screen" args="joint_states:=/robot/joint_states"/>  
 
+  <node name="execute_trajectory_topic_node" pkg="baxter_kinematics" type="execute_trajectory_topic" output="screen" args="joint_states:=/robot/joint_states"/>  
+
 </launch>
