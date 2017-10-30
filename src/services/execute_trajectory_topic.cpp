@@ -23,20 +23,13 @@ void right_eef_Callback(const baxter_core_msgs::EndpointState::ConstPtr&  r_eef_
 //store obj pos vector in eef values
 void obj_state_cloud_Callback(const pcl_tracking::ObjectPosition::ConstPtr& topic_message,
                               Kinematic_values& eef_values){
-    std::vector< geometry_msgs::PointStamped > raw_pos_vector = topic_message->object_position;
-    std::vector< std::vector<double> > obj_pos_vector(raw_pos_vector.size(), std::vector<double>(3));
-    std::vector<double> curr_obj_pos;
-    geometry_msgs::PointStamped curr_raw_obj;
-    for(int i=0; i < raw_pos_vector.size(); i++){
-        curr_raw_obj = raw_pos_vector[i];
-        curr_obj_pos.push_back(curr_raw_obj.point.x);
-        curr_obj_pos.push_back(curr_raw_obj.point.y);
-        curr_obj_pos.push_back(curr_raw_obj.point.z);
-//        obj_pos_vector.insert(int(curr_raw_obj.header.seq), curr_obj_pos);
-        obj_pos_vector.push_back(curr_obj_pos);
+    std::vector< std::vector<double> > obj_pos_vector;
+    for(int i=0; i < topic_message->object_position.size(); i++){
+        obj_pos_vector.push_back({topic_message->object_position[i].point.x,
+                                 topic_message->object_position[i].point.y,
+                                 topic_message->object_position[i].point.z});
 //        ROS_ERROR_STREAM("obj_state_cloud_Callback : obj_state_cloud_Callback: " << curr_obj_pos[0] << " " << curr_obj_pos[1] << " " << curr_obj_pos[2]);
     }
-
     eef_values.set_object_state_vector(obj_pos_vector);
 }
 
@@ -97,7 +90,7 @@ void execute_traj_Callback(const baxter_kinematics::TrajectoryTopic::ConstPtr& t
             waypoints.push_back(start_pose);
             ROS_ERROR_STREAM(start_pose.position.x << " " << start_pose.position.y << " " << start_pose.position.z);
         }
-        usleep(1e4);
+//        usleep(1e4);
 
         // move arms
         auto exec_start = std::chrono::high_resolution_clock::now();
@@ -111,10 +104,7 @@ void execute_traj_Callback(const baxter_kinematics::TrajectoryTopic::ConstPtr& t
                                                       nh,
                                                       false, // force_orien
                                                       feedback,
-                                                      traj_res_pub,
-                                                      "cube", //for feedback
-                                                      gripper_values_vector,
-                                                      gripper_client);
+                                                      traj_res_pub);
         else if(strcmp(eef_name.c_str(), "right") == 0)
             traj_res = plan_and_execute_waypoint_traj("right",
                                                       waypoints,
@@ -123,10 +113,7 @@ void execute_traj_Callback(const baxter_kinematics::TrajectoryTopic::ConstPtr& t
                                                       nh,
                                                       false, // force_orien
                                                       feedback,
-                                                      traj_res_pub,
-                                                      "cube", //for feedback
-                                                      gripper_values_vector,
-                                                      gripper_client);
+                                                      traj_res_pub);
         else{
             ROS_ERROR("please specify in message request, left or right arm");
         }
@@ -146,7 +133,7 @@ void execute_traj_Callback(const baxter_kinematics::TrajectoryTopic::ConstPtr& t
     }
 
     ROS_INFO_STREAM("Trajectory execution success : " << success);
-    ROS_INFO("Done!\n");
+    ROS_INFO("Done execute_traj_Callback!\n");
     // Record end time
     auto finish = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = finish - start;
@@ -156,6 +143,7 @@ void execute_traj_Callback(const baxter_kinematics::TrajectoryTopic::ConstPtr& t
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "execute_trajectory_topic_node");
+
     ros::NodeHandle nh;
     Kinematic_values eef_values;
 
@@ -180,7 +168,7 @@ int main(int argc, char **argv)
 
     std::string execute_topic_name;
     nh.getParam("execute_traj_topic", execute_topic_name);
-    ros::Subscriber traj_exec_msg = nh.subscribe<baxter_kinematics::TrajectoryTopic>(execute_topic_name, 100,
+    ros::Subscriber traj_exec_msg = nh.subscribe<baxter_kinematics::TrajectoryTopic>(execute_topic_name, 1000,
                                                                                boost::bind(execute_traj_Callback, _1,
                                                                                            boost::ref(nh),
                                                                                            boost::ref(ac_l),

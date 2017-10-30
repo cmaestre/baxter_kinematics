@@ -28,7 +28,7 @@ bool get_gripper_status(baxter_kinematics::GripperState::Request &req,
         return false;
     }
 
-    ROS_INFO("Done!");
+    ROS_INFO("Done get_gripper_status!");
     return true;
 }
 

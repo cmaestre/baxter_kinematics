@@ -69,7 +69,7 @@ bool gripper_action(baxter_kinematics::GripperAction::Request &req,
     current_pub.publish(gripperMsg);
 
     res.success = true;
-    ROS_INFO("Done!");
+    ROS_INFO("Done gripper_action!");
     return true;
 }
 

@@ -47,7 +47,9 @@ struct Eef_values {
     ros::ServiceClient client_get_object_pose;
     std::string visual_type;
 
-    std::vector< std::vector<double> > obj_pos_vector;
+    std::vector< std::vector<double> > obj_pos_vector;       
+
+    std::string obj_pos_topic_name;
 
 };
 
@@ -63,13 +65,84 @@ public:
         eef_values.move_group_right_pt_.reset(new moveit::planning_interface::MoveGroup("right_arm"));
         eef_values.move_group_right_pt_->setPlannerId("RRTConnectkConfigDefault");
 
-        std::vector< double> obj_pos = {-999.0, -999.0, -999.0};
+        std::vector< double> obj_pos = { std::numeric_limits<double>::infinity(),
+                                         std::numeric_limits<double>::infinity(),
+                                         std::numeric_limits<double>::infinity()};
         eef_values.obj_pos_vector.push_back(obj_pos);
+
+//        // Set up subscribers
+
+//        //// End effectors
+//        ros::Subscriber sub_l_eef_msg = nh.subscribe<baxter_core_msgs::EndpointState>("/robot/limb/left/endpoint_state", 10,
+//                                                                                      Kinematic_values::left_eef_Callback);
+//        ros::Subscriber sub_r_eef_msg = nh.subscribe<baxter_core_msgs::EndpointState>("/robot/limb/right/endpoint_state", 10,
+//                                                                                      Kinematic_values::right_eef_Callback);
+//        //// Object positions
+//        bool real_robot;
+//        ros::param::get("real_robot", real_robot);
+//        if (real_robot)
+//            eef_values.obj_pos_topic_name = "/visual/obj_pos_vector";
+
+//        ros::Subscriber sub_obj_state = nh.subscribe<pcl_tracking::ObjectPosition>(eef_values.obj_pos_topic_name, 1,
+//                                                                                   Kinematic_values::obj_state_cloud_Callback);
     }
 
-    std::string& get_baxter_arm(){
-        return eef_values.baxter_arm;
-    }
+//    ////////////////////////////////////////////////////////////////////////////////////
+//    //get a baxter eef pose "either the right one or the left one"
+//    void locate_eef_pose(geometry_msgs::Pose eef_feedback, const std::string gripper){
+//        Eigen::VectorXd end_effector_pose(6);
+//        geometry_msgs::Pose eef_pose_quat = eef_feedback;
+//        tf::Quaternion eef_rpy_orientation;
+
+//        tf::quaternionMsgToTF(eef_pose_quat.orientation, eef_rpy_orientation);
+
+//        double roll, yaw, pitch;
+//        tf::Matrix3x3 m(eef_rpy_orientation);
+//        m.getRPY(roll, pitch, yaw);
+//        Eigen::Vector3d eef_current_position;
+//        Eigen::Vector3d eef_current_orientation;
+//        eef_current_position << eef_pose_quat.position.x,
+//                eef_pose_quat.position.y,
+//                eef_pose_quat.position.z;
+
+//        eef_current_orientation <<    roll,
+//                pitch,
+//                yaw;
+//        end_effector_pose << eef_pose_quat.position.x,
+//                eef_pose_quat.position.y,
+//                eef_pose_quat.position.z,
+//                roll,
+//                pitch,
+//                yaw;
+//        set_eef_position(eef_current_position, gripper);
+//        set_eef_rpy_orientation(eef_current_orientation, gripper);
+//        set_eef_pose(eef_pose_quat, gripper);
+//        set_eef_rpy_pose(end_effector_pose, gripper);
+//        //    ROS_ERROR_STREAM("locating eef stuff gave for position: " << eef_values.get_eef_position(gripper));// eef_current_position); // << "\n and for orientation: " << eef_current_angles);
+//    }
+
+//    // subscribers callbacks
+//    //call back that register baxter left end effector pose and rearrange the orientation in RPY
+//    void left_eef_Callback(const baxter_core_msgs::EndpointState::ConstPtr&  l_eef_feedback){
+//        locate_eef_pose(l_eef_feedback->pose, "left_gripper");
+//    }
+
+//    //call back that register baxter right end effector pose and rearrange the orientation in RPY
+//    void right_eef_Callback(const baxter_core_msgs::EndpointState::ConstPtr&  r_eef_feedback){
+//        locate_eef_pose(r_eef_feedback->pose, "right_gripper");
+//    }
+
+//    //store obj pos vector in eef values
+//    void obj_state_cloud_Callback(const pcl_tracking::ObjectPosition::ConstPtr& topic_message){
+//        std::vector< std::vector<double> > obj_pos_vector;
+//        for(int i=0; i < topic_message->object_position.size(); i++){
+//            obj_pos_vector.push_back({topic_message->object_position[i].point.x,
+//                                     topic_message->object_position[i].point.y,
+//                                     topic_message->object_position[i].point.z});
+//    //        ROS_ERROR_STREAM("obj_state_cloud_Callback : obj_state_cloud_Callback: " << curr_obj_pos[0] << " " << curr_obj_pos[1] << " " << curr_obj_pos[2]);
+//        }
+//        eef_values.set_object_state_vector(obj_pos_vector);
+//    }
 
     ////////////////////////////////////////////
 
@@ -81,11 +154,14 @@ public:
             return eef_values.move_group_right_pt_;
     }
 
-    std::vector< std::vector<double> > get_object_state_vector(){
+    std::vector< std::vector<double> >& get_object_state_vector(){
         return eef_values.obj_pos_vector;
     }
 
-    void set_object_state_vector(std::vector< std::vector<double> > obj_pos_vector_){
+    void set_object_state_vector(std::vector< std::vector<double> >& obj_pos_vector_){
+//        ROS_ERROR_STREAM("eef_values : get_object_state_vector " << obj_pos_vector_[0][0] << " " <<
+//                                                                    obj_pos_vector_[0][1] << " " <<
+//                                                                    obj_pos_vector_[0][2]);
         eef_values.obj_pos_vector = obj_pos_vector_;
     }
 
@@ -132,8 +208,11 @@ public:
         }
     }
 
+    std::string& get_baxter_arm(){
+        return eef_values.baxter_arm;
+    }
 
-    // getters
+    // setters
     void set_eef_pose(geometry_msgs::Pose& eef_pose, const std::string gripper){
         if(strcmp(gripper.c_str(), "left_gripper") == 0)
             eef_values.l_eef_pose = eef_pose;
@@ -176,8 +255,9 @@ public:
         }
 
     }
-
-
 };
+
+
+
 
 #endif

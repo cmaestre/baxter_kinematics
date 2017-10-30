@@ -54,7 +54,7 @@ int restart_robot(baxter_kinematics::RestartRobot::Request &req,
 
     res.success = true;
     spinner.stop();
-    ROS_INFO("Done!");
+    ROS_INFO("Done restart_robot!");
     return 1;
 }
 
@@ -71,6 +71,7 @@ int main(int argc, char** argv)
                                                                                   boost::bind(right_eef_Callback, _1, boost::ref(eef_values_)));
     actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> ac_left("/robot/limb/left/follow_joint_trajectory", true);
     actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> ac_right("/robot/limb/right/follow_joint_trajectory", true);
+
     ros::ServiceClient client_gripper = nh.serviceClient<baxter_kinematics::GripperAction>("/baxter_kinematics/gripper_action");
 
     ros::ServiceServer service = nh.advertiseService<baxter_kinematics::RestartRobot::Request,

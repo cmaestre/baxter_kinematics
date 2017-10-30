@@ -65,14 +65,16 @@ bool move_to_pos(baxter_kinematics::MoveToPos::Request &req,
                                            ac_left,
                                            eef_values,
                                            nh,
-                                           req.force_orien);
+                                           req.force_orien,
+                                           false); // feedback
         else if(strcmp(req.eef_name.c_str(), "right") == 0)
             traj_res = plan_and_execute_waypoint_traj("right",
                                            waypoints,
                                            ac_right,
                                            eef_values,
                                            nh,
-                                           req.force_orien);
+                                           req.force_orien,
+                                           false); // feedback
 
         if (curr_iter == max_nb_tries or traj_res == 0)
             res.success = false;
@@ -87,7 +89,7 @@ bool move_to_pos(baxter_kinematics::MoveToPos::Request &req,
 
     // Wait till user kills the process (Control-C)
     spinner.stop();
-    ROS_INFO("Done!");
+    ROS_INFO("Done move_to_position!");
     return true;
 }
 

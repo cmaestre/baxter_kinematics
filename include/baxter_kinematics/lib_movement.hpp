@@ -81,10 +81,7 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
                                     ros::NodeHandle nh,
                                     bool force_orien = false,
                                     bool feedback_data = false,
-                                    ros::Publisher traj_res_pub = ros::Publisher(),
-                                    std::string object_name = "",
-                                    std::vector<std::string> gripper_values = std::vector<std::string>(),
-                                    ros::ServiceClient gripper_client = ros::ServiceClient());
+                                    ros::Publisher traj_res_pub = ros::Publisher());
 
 
 /** execute a trajectory (nothing returned)

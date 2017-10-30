@@ -111,10 +111,7 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
                                                       nh,
                                                       false, // force_orien
                                                       req.feedback,
-                                                      traj_res_pub,
-                                                      "cube", //for feedback
-                                                      gripper_values_vector,
-                                                      gripper_client);
+                                                      traj_res_pub);
         else if(strcmp(req.eef_name.c_str(), "right") == 0)
             traj_res = plan_and_execute_waypoint_traj("right",
                                                       waypoints,
@@ -123,10 +120,7 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
                                                       nh,
                                                       false, // force_orien
                                                       req.feedback,
-                                                      traj_res_pub,
-                                                      "cube", //for feedback
-                                                      gripper_values_vector,
-                                                      gripper_client);
+                                                      traj_res_pub);
         else{
             ROS_ERROR("please specify in service request, left or right arm");
             return false;
@@ -146,7 +140,7 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
         ROS_ERROR_STREAM("Execution elapsed time: " << exec_elapsed.count() << " seconds");
     }
 
-    ROS_INFO("Done!\n");
+    ROS_INFO("Done trajectory_execution!\n");
     // Record end time
     auto finish = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = finish - start;

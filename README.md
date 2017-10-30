@@ -14,10 +14,14 @@ Baxter SDK : http://sdk.rethinkrobotics.com/wiki/Workstation_Setup
 
 (To run in Gazebo) Baxter model in Gazebo : http://sdk.rethinkrobotics.com/wiki/Simulator_Installation
 
-## Install :
+## Install (in ~/baxter_ws/src/) :
 git clone https://github.com/cmaestre/baxter_kinematics.git 
 
-## Run 
+git clone https://github.com/ros-planning/moveit_robots/tree/indigo-devel
+
+Note: don't forget to catkin_make
+
+## Run (in ~/baxter_ws)
 ### With the real robot switched on
 roslaunch baxter_kinematics run_services.launch
 

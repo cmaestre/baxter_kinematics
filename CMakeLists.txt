@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf
   message_generation
   baxter_core_msgs
+  actionlib_msgs
 )
 
 find_package(cmake_modules REQUIRED)
@@ -20,11 +21,6 @@ find_package(Eigen REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system )
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -fPIC")
-
-add_message_files(
-  FILES
-  TrajectoryTopic.msg  
-)
 
 add_service_files(
   FILES
@@ -36,17 +32,19 @@ add_service_files(
   GripperState.srv
 )
 
+add_action_files(
+  DIRECTORY action 
+  FILES moveGoal.action)
+
 generate_messages(
   DEPENDENCIES
   std_msgs
+  actionlib_msgs
 )
 
 catkin_package(
   INCLUDE_DIRS include
-  CATKIN_DEPENDS message_runtime
-#  LIBRARIES crustcrawler_cppkdl
-#  CATKIN_DEPENDS moveit_ros_planning_interface roscpp rospy std_msgs tf
-#  DEPENDS system_lib
+  CATKIN_DEPENDS message_runtime actionlib_msgs
 )
 
 include_directories(include ${Eigen_INCLUDE_DIR} ${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
