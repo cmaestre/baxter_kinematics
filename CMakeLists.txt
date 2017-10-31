@@ -22,6 +22,11 @@ find_package(Boost REQUIRED COMPONENTS system )
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -fPIC")
 
+add_message_files(
+  FILES
+  TrajectoryTopic.msg  
+)
+
 add_service_files(
   FILES
   GetEefPose.srv
