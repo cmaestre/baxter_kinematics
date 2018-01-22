@@ -504,45 +504,45 @@ void feedbackCb(const control_msgs::FollowJointTrajectoryFeedbackConstPtr& messa
 //                std::vector<double>& prev_object_state_vector,
 //                bool& prev_obj_pos)
 {
-    // Init prev object state
-    if (!prev_obj_pos){
-        if(eef_values.get_object_state_vector().empty())
-            return;
-        prev_object_state_vector = eef_values.get_object_state_vector()[0];
-        prev_obj_pos = true;
-        ROS_ERROR_STREAM("feedbackCb dist - NEW prev_object_state_vector ");
-    }
-    // Check if environment changed
-    else{
-        std::vector<double> object_state_vector;
-        if(eef_values.get_object_state_vector().empty())
-            return;
-        object_state_vector = eef_values.get_object_state_vector()[0];
+//    // Init prev object state
+//    if (!prev_obj_pos){
+//        if(eef_values.get_object_state_vector().empty())
+//            return;
+//        prev_object_state_vector = eef_values.get_object_state_vector()[0];
+//        prev_obj_pos = true;
+//        ROS_ERROR_STREAM("feedbackCb dist - NEW prev_object_state_vector ");
+//    }
+//    // Check if environment changed
+//    else{
+//        std::vector<double> object_state_vector;
+//        if(eef_values.get_object_state_vector().empty())
+//            return;
+//        object_state_vector = eef_values.get_object_state_vector()[0];
 
-        double x = object_state_vector[0] - prev_object_state_vector[0];
-        double y = object_state_vector[1] - prev_object_state_vector[1];
-        double z = object_state_vector[2] - prev_object_state_vector[2];
-        ROS_ERROR_STREAM("feedbackCb dist " << std::sqrt(std::pow(x, 2) + std::pow(y, 2) + std::pow(z, 2)));
-        double min_obj_change;
-        ros::param::get("obj_moved_threshold", min_obj_change);
-        if (std::sqrt(std::pow(x, 2) + std::pow(y, 2) + std::pow(z, 2)) > min_obj_change) {
-            ROS_ERROR_STREAM("feedbackCb - Environment changed");
-            ROS_ERROR_STREAM("feedbackCb - object_state_vector " << object_state_vector [0] << " " <<
-                                                                    object_state_vector [1] << " " <<
-                                                                    object_state_vector [2]);
-            ROS_ERROR_STREAM("feedbackCb - prev_object_state_vector " << prev_object_state_vector [0] << " " <<
-                                                                         prev_object_state_vector [1] << " " <<
-                                                                         prev_object_state_vector [2]);
-            ros::param::set("env_changed", true);
-            ac.cancelAllGoals();
-        }
+//        double x = object_state_vector[0] - prev_object_state_vector[0];
+//        double y = object_state_vector[1] - prev_object_state_vector[1];
+//        double z = object_state_vector[2] - prev_object_state_vector[2];
+//        ROS_ERROR_STREAM("feedbackCb dist " << std::sqrt(std::pow(x, 2) + std::pow(y, 2) + std::pow(z, 2)));
+//        double min_obj_change;
+//        ros::param::get("obj_moved_threshold", min_obj_change);
+//        if (std::sqrt(std::pow(x, 2) + std::pow(y, 2) + std::pow(z, 2)) > min_obj_change) {
+//            ROS_ERROR_STREAM("feedbackCb - Environment changed");
+//            ROS_ERROR_STREAM("feedbackCb - object_state_vector " << object_state_vector [0] << " " <<
+//                                                                    object_state_vector [1] << " " <<
+//                                                                    object_state_vector [2]);
+//            ROS_ERROR_STREAM("feedbackCb - prev_object_state_vector " << prev_object_state_vector [0] << " " <<
+//                                                                         prev_object_state_vector [1] << " " <<
+//                                                                         prev_object_state_vector [2]);
+//            ros::param::set("env_changed", true);
+//            ac.cancelAllGoals();
+//        }
 
-//        ROS_ERROR_STREAM("feedbackCb finished " << object_state_vector [0] << " " <<
-//                                                   object_state_vector [1] << " " <<
-//                                                   object_state_vector [2]);
-    }
+////        ROS_ERROR_STREAM("feedbackCb finished " << object_state_vector [0] << " " <<
+////                                                   object_state_vector [1] << " " <<
+////                                                   object_state_vector [2]);
+//    }
 
-//    ROS_ERROR_STREAM("feedbackCb finished");
+////    ROS_ERROR_STREAM("feedbackCb finished");
 }
 
 
@@ -726,10 +726,10 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
                                 boost::ref(eef_selected)),
                     actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>::SimpleActiveCallback(),
 //                    &feedbackCb
-//                    actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>::SimpleFeedbackCallback()
-                    boost::bind(feedbackCb, _1,
-                                boost::ref(eef_values),
-                                boost::ref(ac))
+                    actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>::SimpleFeedbackCallback()
+//                    boost::bind(feedbackCb, _1,
+//                                boost::ref(eef_values),
+//                                boost::ref(ac))
 //                                ,
 //                                boost::ref(prev_object_state_vector),
 //                                boost::ref(prev_obj_pos))
