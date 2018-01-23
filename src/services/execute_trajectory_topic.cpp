@@ -23,13 +23,17 @@ void right_eef_Callback(const baxter_core_msgs::EndpointState::ConstPtr&  r_eef_
 //store obj pos vector in eef values
 void obj_state_cloud_Callback(const pcl_tracking::ObjectPosition::ConstPtr& topic_message,
                               Kinematic_values& eef_values){
-    std::vector< std::vector<double> > obj_pos_vector;
+    std::vector< std::pair<int, std::vector<double> > > obj_pos_vector;
     for(int i=0; i < topic_message->object_position.size(); i++){
-        obj_pos_vector.push_back({topic_message->object_position[i].point.x,
-                                 topic_message->object_position[i].point.y,
-                                 topic_message->object_position[i].point.z});
-//        ROS_ERROR_STREAM("obj_state_cloud_Callback : obj_state_cloud_Callback: " << curr_obj_pos[0] << " " << curr_obj_pos[1] << " " << curr_obj_pos[2]);
+        std::pair<int, std::vector<double> > curr_pair (
+                      topic_message->object_position[i].ID,
+                    { topic_message->object_position[i].object_position.point.x,
+                      topic_message->object_position[i].object_position.point.y,
+                      topic_message->object_position[i].object_position.point.z } );
+        obj_pos_vector.push_back(curr_pair);
     }
+//        ROS_ERROR_STREAM("obj_state_cloud_Callback : obj_state_cloud_Callback: " << curr_obj_pos[0] << " " << curr_obj_pos[1] << " " << curr_obj_pos[2]);
+
     eef_values.set_object_state_vector(obj_pos_vector);
 }
 

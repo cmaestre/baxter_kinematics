@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   baxter_core_msgs
   actionlib_msgs
+  mocap_optitrack
 )
 
 find_package(cmake_modules REQUIRED)
@@ -45,6 +46,7 @@ generate_messages(
   DEPENDENCIES
   std_msgs
   actionlib_msgs
+  mocap_optitrack
 )
 
 catkin_package(

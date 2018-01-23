@@ -23,17 +23,18 @@ void right_eef_Callback(const baxter_core_msgs::EndpointState::ConstPtr&  r_eef_
 //store obj pos vector in eef values
 void obj_state_cloud_Callback(const pcl_tracking::ObjectPosition::ConstPtr& topic_message,
                               Kinematic_values& eef_values){
-    std::vector< geometry_msgs::PointStamped > raw_pos_vector = topic_message->object_position;
-    std::vector< std::vector<double> > obj_pos_vector(raw_pos_vector.size(), std::vector<double>(3));
+    //std::vector< geometry_msgs::PointStamped > raw_pos_vector = topic_message->object_position;
+    std::vector< mocap_optitrack::ObjectPositionID > raw_id_pos_vector = topic_message->object_position;
+    std::vector< std::pair<int, std::vector<double> > > obj_pos_vector;
     std::vector<double> curr_obj_pos;
-    geometry_msgs::PointStamped curr_raw_obj;
-    for(int i=0; i < raw_pos_vector.size(); i++){
-        curr_raw_obj = raw_pos_vector[i];
-        curr_obj_pos.push_back(curr_raw_obj.point.x);
-        curr_obj_pos.push_back(curr_raw_obj.point.y);
-        curr_obj_pos.push_back(curr_raw_obj.point.z);
-//        obj_pos_vector.insert(int(curr_raw_obj.header.seq), curr_obj_pos);
-        obj_pos_vector.push_back(curr_obj_pos);
+    int id;
+    for(int i=0; i < raw_id_pos_vector.size(); i++){
+        id = raw_id_pos_vector[i].ID;
+        curr_obj_pos =  {raw_id_pos_vector[i].object_position.point.x,
+                        raw_id_pos_vector[i].object_position.point.y,
+                        raw_id_pos_vector[i].object_position.point.z};
+        obj_pos_vector.push_back(std::make_pair(id,curr_obj_pos));
+
 //        ROS_ERROR_STREAM("obj_state_cloud_Callback : obj_state_cloud_Callback: " << curr_obj_pos[0] << " " << curr_obj_pos[1] << " " << curr_obj_pos[2]);
     }
 

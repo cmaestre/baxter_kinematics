@@ -390,9 +390,9 @@ bool optimize_trajectory(std::vector<geometry_msgs::Pose>& vector_to_optimize,
  * @brief q
  * @param b
 **/
-void print_feedback(ros::Publisher traj_res_pub,
-                    Kinematic_values& eef_values,
-                    std::string eef_selected)
+void publish_feedback(ros::Publisher traj_res_pub,
+                        Kinematic_values& eef_values,
+                        std::string eef_selected)
   {
     /////////////////// FEEDBACK
 //    ROS_ERROR_STREAM("STORE/PUBLISH FEEDBACK");
@@ -400,58 +400,31 @@ void print_feedback(ros::Publisher traj_res_pub,
 //    ROS_ERROR_STREAM("WP " << nb_wp_to_reach << " REACHED for feedback");
 //    ROS_ERROR_STREAM("Goal state " << state.getText().c_str());
 
-    Eigen::Vector3d eef_pose;
+    Eigen::Vector3d eef_pose;    
+    std::vector< std::pair<int, std::vector<double> > > obj_pos_id_vector;
     std_msgs::Float64MultiArray real_traj_to_publish;
-    std::vector<Eigen::Vector3d> eef_position_vector;
-    std::vector<Eigen::Vector3d> eef_orientation_vector;
-    std::vector<Eigen::Vector3d> object_position_vector;
-    std::vector<Eigen::Vector3d> object_orientation_vector;
-    std::vector<double> object_state_vector;
-    std::vector<double> curr_eff_position(3);
 
+    //save eef values
     eef_pose = eef_values.get_eef_position(eef_selected);
     if ((eef_pose(0) == 0) && (eef_pose(1) == 0) && (eef_pose(2) == 0))
         return;
 
-    curr_eff_position[0] = eef_pose(0);
-    curr_eff_position[1] = eef_pose(1);
-    curr_eff_position[2] = eef_pose(2);
-
-    //save eef values
-    eef_pose = eef_values.get_eef_position(eef_selected);
-    eef_position_vector.push_back(eef_pose);
-    eef_orientation_vector.push_back(eef_values.get_eef_rpy_orientation(eef_selected));
-
-    //save object values
-    if(eef_values.get_object_state_vector().empty())
-        return;
-    object_state_vector = eef_values.get_object_state_vector()[0];
-    if (object_state_vector.empty())
-        return;
-
-//    object_state_vector.push_back(0); // fake orientation
-//    object_state_vector.push_back(0);
-//    object_state_vector.push_back(0);
-
-    Eigen::Vector3d current_object_position;
-    current_object_position <<  object_state_vector[0],
-                                object_state_vector[1],
-                                object_state_vector[2];
-    object_position_vector.push_back(current_object_position);
-
-//    Eigen::Vector3d current_object_orientation;
-//    current_object_orientation << object_state_vector[3],
-//                                  object_state_vector[4],
-//                                  object_state_vector[5];
-//    object_orientation_vector.push_back(current_object_orientation);
-
-    //store to publish afterwards
+    //store eef to publish afterwards
     real_traj_to_publish.data.push_back(eef_pose(0));
     real_traj_to_publish.data.push_back(eef_pose(1));
     real_traj_to_publish.data.push_back(eef_pose(2));
-    real_traj_to_publish.data.push_back(object_state_vector[0]);
-    real_traj_to_publish.data.push_back(object_state_vector[1]);
-    real_traj_to_publish.data.push_back(object_state_vector[2]);
+
+    //save object values
+    if(eef_values.get_object_state_vector().empty())
+        return;   
+    obj_pos_id_vector = eef_values.get_object_state_vector();
+    for (const std::pair<int, std::vector<double> >& curr_obj_id_pos : obj_pos_id_vector){
+        //store objects ID and positions to publish afterwards
+        real_traj_to_publish.data.push_back((float)curr_obj_id_pos.first);
+        real_traj_to_publish.data.push_back(curr_obj_id_pos.second[0]);
+        real_traj_to_publish.data.push_back(curr_obj_id_pos.second[1]);
+        real_traj_to_publish.data.push_back(curr_obj_id_pos.second[2]);
+    }
 
     // publish current trajectory
     if (real_traj_to_publish.data.size() > 0) {
@@ -477,7 +450,7 @@ void doneCb(const actionlib::SimpleClientGoalState& state,
             Kinematic_values& eef_values,
             std::string eef_selected)
   {
-    print_feedback(traj_res_pub, eef_values, eef_selected);
+    publish_feedback(traj_res_pub, eef_values, eef_selected);
     ROS_ERROR_STREAM("doneCb finished ");
   }
 
@@ -585,13 +558,16 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
                                    ros::Publisher traj_res_pub){
 
 
-    std::vector<double> object_state_vector;
+    std::vector< std::pair<int, std::vector<double> > > obj_pos_id_vector;
     if(eef_values.get_object_state_vector().empty())
         return -1;
-    object_state_vector = eef_values.get_object_state_vector()[0];
-    ROS_ERROR_STREAM("plan_and_execute_waypoint_traj " << object_state_vector [0] << " " <<
-                                                          object_state_vector [1] << " " <<
-                                                          object_state_vector [2]);
+    obj_pos_id_vector = eef_values.get_object_state_vector();
+    for (const std::pair<int, std::vector<double> >& curr_obj_id_pos : obj_pos_id_vector){
+        ROS_ERROR_STREAM("Object ID: " << curr_obj_id_pos.first <<
+                         " Object pos: " << curr_obj_id_pos.second [0] << " " <<
+                                            curr_obj_id_pos.second [1] << " " <<
+                                            curr_obj_id_pos.second [2]);
+    }
 
     ROS_ERROR_STREAM("Init plan : " << time_since_epoch());
 

@@ -47,7 +47,7 @@ struct Eef_values {
     ros::ServiceClient client_get_object_pose;
     std::string visual_type;
 
-    std::vector< std::vector<double> > obj_pos_vector;       
+    std::vector< std::pair<int, std::vector<double> > > obj_pos_vector;
 
     std::string obj_pos_topic_name;
 
@@ -65,10 +65,13 @@ public:
         eef_values.move_group_right_pt_.reset(new moveit::planning_interface::MoveGroup("right_arm"));
         eef_values.move_group_right_pt_->setPlannerId("RRTConnectkConfigDefault");
 
-        std::vector< double> obj_pos = { std::numeric_limits<double>::infinity(),
-                                         std::numeric_limits<double>::infinity(),
-                                         std::numeric_limits<double>::infinity()};
-        eef_values.obj_pos_vector.push_back(obj_pos);
+
+        std::pair<int, std::vector<double> > obj_pos_id (-1,{0,0,0});
+//                                                        { std::numeric_limits<double>::infinity(),
+//                                                          std::numeric_limits<double>::infinity(),
+//                                                          std::numeric_limits<double>::infinity()});
+
+        eef_values.obj_pos_vector.push_back(obj_pos_id);
 
 //        // Set up subscribers
 
@@ -154,11 +157,11 @@ public:
             return eef_values.move_group_right_pt_;
     }
 
-    std::vector< std::vector<double> >& get_object_state_vector(){
+    std::vector< std::pair<int, std::vector<double> > >& get_object_state_vector(){
         return eef_values.obj_pos_vector;
     }
 
-    void set_object_state_vector(std::vector< std::vector<double> >& obj_pos_vector_){
+    void set_object_state_vector(std::vector< std::pair<int, std::vector<double> > >& obj_pos_vector_){
 //        ROS_ERROR_STREAM("eef_values : get_object_state_vector " << obj_pos_vector_[0][0] << " " <<
 //                                                                    obj_pos_vector_[0][1] << " " <<
 //                                                                    obj_pos_vector_[0][2]);
