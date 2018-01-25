@@ -730,5 +730,9 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
     //    std::chrono::duration<double> exec_plan_elapsed = exec_plan_finish - exec_plan;
     //    ROS_ERROR_STREAM("Total execution time: " << exec_plan_elapsed.count() << " seconds");
 
+    ROS_ERROR_STREAM("EEF reached position : " << eef_values.get_eef_position(selected_eef)(0)
+                     << " " << eef_values.get_eef_position(selected_eef)(1)
+                     << " " << eef_values.get_eef_position(selected_eef)(2));
+
     return 1;
 }
