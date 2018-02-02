@@ -81,6 +81,8 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
                                     ros::NodeHandle nh,
                                     bool force_orien = false,
                                     bool feedback_data = false,
+                                    ros::ServiceClient gripper_client = ros::ServiceClient(),
+                                    std::vector<std::string> gripper_values_vector = {},
                                     ros::Publisher traj_res_pub = ros::Publisher());
 
 

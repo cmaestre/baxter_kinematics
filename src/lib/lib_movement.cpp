@@ -5,8 +5,11 @@
 #include <chrono>
 #include <type_traits>
 
-std::vector<double> prev_object_state_vector;
-bool prev_obj_pos = false;
+//std::vector<double> prev_object_state_vector;
+//std::vector< std::pair<int, std::vector<double> > > prev_object_state_vector;
+std::vector<double> prev_object_state;
+bool prev_obj_pos_bool = false;
+int curr_obj_id, nb_wp_reached;
 
 std::chrono::system_clock::rep time_since_epoch(){
     auto now = std::chrono::system_clock::now().time_since_epoch();
@@ -438,7 +441,7 @@ void publish_feedback(ros::Publisher traj_res_pub,
 
 //    ROS_ERROR_STREAM("Number of reached wp is: " << nb_wp_reached << "/" << waypoints.size());
 
-    prev_obj_pos = false;
+    prev_obj_pos_bool = false;
   }
 
 /**
@@ -446,11 +449,28 @@ void publish_feedback(ros::Publisher traj_res_pub,
  * @param b
 **/
 void doneCb(const actionlib::SimpleClientGoalState& state,
-            ros::Publisher traj_res_pub,
-            Kinematic_values& eef_values,
-            std::string eef_selected)
+            ros::Publisher traj_res_pub,            Kinematic_values& eef_values,
+            std::string eef_selected,
+            std::vector<std::string> gripper_values_vector,
+            ros::ServiceClient gripper_client)
   {
     publish_feedback(traj_res_pub, eef_values, eef_selected);
+
+    if (!gripper_values_vector.empty()){
+        ROS_INFO_STREAM("doneCb - iter: " << curr_obj_id << " " <<
+                        " gripper action: " << gripper_values_vector[curr_obj_id]);
+        baxter_kinematics::GripperAction srv;
+        srv.request.eef_name = eef_selected;
+        srv.request.action = gripper_values_vector[curr_obj_id];
+        try{
+            gripper_client.call(srv);
+        } catch (const std::exception& e) {
+            ROS_ERROR_STREAM("doneCb : gripper action failed");
+        }
+    } else
+        ROS_ERROR_STREAM("doneCb : no gripper action needed ");
+
+
     ROS_ERROR_STREAM("doneCb finished ");
   }
 
@@ -475,47 +495,51 @@ void feedbackCb(const control_msgs::FollowJointTrajectoryFeedbackConstPtr& messa
                 actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>& ac)
 //,
 //                std::vector<double>& prev_object_state_vector,
-//                bool& prev_obj_pos)
+//                std::vector< std::pair<int, std::vector<double> > > prev_object_state_vector,
+//                int& curr_obj_id,
+//                bool& prev_obj_pos_bool)
 {
-//    // Init prev object state
-//    if (!prev_obj_pos){
-//        if(eef_values.get_object_state_vector().empty())
-//            return;
-//        prev_object_state_vector = eef_values.get_object_state_vector()[0];
-//        prev_obj_pos = true;
-//        ROS_ERROR_STREAM("feedbackCb dist - NEW prev_object_state_vector ");
-//    }
-//    // Check if environment changed
-//    else{
-//        std::vector<double> object_state_vector;
-//        if(eef_values.get_object_state_vector().empty())
-//            return;
-//        object_state_vector = eef_values.get_object_state_vector()[0];
+    // Init prev object state
+    if (!prev_obj_pos_bool){
+        if(eef_values.get_object_state_vector().empty())
+            return;
+//        prev_object_state_vector = eef_values.get_object_state_vector();
+        prev_object_state = eef_values.get_object_state(curr_obj_id);
+        prev_obj_pos_bool = true;
+        ROS_ERROR_STREAM("feedbackCb dist - NEW prev_object_state ");
+    }
+    // Check if environment changed
+    else{
+        std::vector<double> curr_object_state;
+        if(eef_values.get_object_state_vector().empty())
+            return;
+//        curr_object_state = eef_values.get_object_state_vector()[0];
+        curr_object_state = eef_values.get_object_state(curr_obj_id);
 
-//        double x = object_state_vector[0] - prev_object_state_vector[0];
-//        double y = object_state_vector[1] - prev_object_state_vector[1];
-//        double z = object_state_vector[2] - prev_object_state_vector[2];
+        double x = curr_object_state[0] - prev_object_state[0];
+        double y = curr_object_state[1] - prev_object_state[1];
+        double z = curr_object_state[2] - prev_object_state[2];
 //        ROS_ERROR_STREAM("feedbackCb dist " << std::sqrt(std::pow(x, 2) + std::pow(y, 2) + std::pow(z, 2)));
-//        double min_obj_change;
-//        ros::param::get("obj_moved_threshold", min_obj_change);
-//        if (std::sqrt(std::pow(x, 2) + std::pow(y, 2) + std::pow(z, 2)) > min_obj_change) {
-//            ROS_ERROR_STREAM("feedbackCb - Environment changed");
-//            ROS_ERROR_STREAM("feedbackCb - object_state_vector " << object_state_vector [0] << " " <<
-//                                                                    object_state_vector [1] << " " <<
-//                                                                    object_state_vector [2]);
-//            ROS_ERROR_STREAM("feedbackCb - prev_object_state_vector " << prev_object_state_vector [0] << " " <<
-//                                                                         prev_object_state_vector [1] << " " <<
-//                                                                         prev_object_state_vector [2]);
-//            ros::param::set("env_changed", true);
-//            ac.cancelAllGoals();
-//        }
+        double min_obj_change;
+        ros::param::get("obj_moved_threshold", min_obj_change);
+        if (std::sqrt(std::pow(x, 2) + std::pow(y, 2) + std::pow(z, 2)) > min_obj_change) {
+            ROS_ERROR_STREAM("feedbackCb - Environment changed");
+            ROS_ERROR_STREAM("feedbackCb - curr_object_state " << curr_object_state [0] << " " <<
+                                                                    curr_object_state [1] << " " <<
+                                                                    curr_object_state [2]);
+            ROS_ERROR_STREAM("feedbackCb - prev_object_state " << prev_object_state [0] << " " <<
+                                                                         prev_object_state [1] << " " <<
+                                                                         prev_object_state [2]);
+            ros::param::set("env_changed", true);
+            ac.cancelAllGoals();
+        }
 
-////        ROS_ERROR_STREAM("feedbackCb finished " << object_state_vector [0] << " " <<
-////                                                   object_state_vector [1] << " " <<
-////                                                   object_state_vector [2]);
-//    }
+//        ROS_ERROR_STREAM("feedbackCb finished " << object_state_vector [0] << " " <<
+//                                                   object_state_vector [1] << " " <<
+//                                                   object_state_vector [2]);
+    }
 
-////    ROS_ERROR_STREAM("feedbackCb finished");
+//    ROS_ERROR_STREAM("feedbackCb finished");
 }
 
 
@@ -555,6 +579,8 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
                                    ros::NodeHandle nh,
                                    bool force_orien,
                                    bool feedback_data,
+                                   ros::ServiceClient gripper_client,
+                                   std::vector<std::string> gripper_values_vector,
                                    ros::Publisher traj_res_pub){
 
 
@@ -624,7 +650,7 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
     }
 
     moveit_msgs::RobotTrajectory robot_trajectory;
-    double fraction = group->computeCartesianPath(waypoints, 0.01, 0.0, robot_trajectory);
+    double fraction = group->computeCartesianPath(waypoints, 0.01, 0, robot_trajectory);
     ROS_WARN_STREAM("fraction solved of desired path in this trial is: " <<
                     fraction);  //eef_jump_step size determine the speed of resulted motion
 
@@ -693,22 +719,27 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
     control_msgs::FollowJointTrajectoryGoal goal;
     goal.trajectory = robot_trajectory.joint_trajectory;
     goal.goal_time_tolerance = ros::Duration(0);
-    prev_obj_pos = false;
+    prev_obj_pos_bool= false;
+    if (!ros::param::get("curr_obj_id", curr_obj_id))
+        curr_obj_id = 0;
     if (feedback_data){
+        nb_wp_reached = 0;
         ac.sendGoal(goal,
                     boost::bind(doneCb, _1,
                                 boost::ref(traj_res_pub),
                                 boost::ref(eef_values),
-                                boost::ref(eef_selected)),
+                                boost::ref(eef_selected),
+                                boost::ref(gripper_values_vector),
+                                boost::ref(gripper_client)),
                     actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>::SimpleActiveCallback(),
-//                    &feedbackCb
                     actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>::SimpleFeedbackCallback()
 //                    boost::bind(feedbackCb, _1,
 //                                boost::ref(eef_values),
 //                                boost::ref(ac))
-//                                ,
-//                                boost::ref(prev_object_state_vector),
-//                                boost::ref(prev_obj_pos))
+//                    ,
+////                                boost::ref(prev_object_state_vector),
+//                                boost::ref(curr_obj_id),
+//                                boost::ref(prev_obj_pos_bool))
                     );
 
 //        // Stop the goal if there is a change in the environment
@@ -725,14 +756,13 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
     else
         ac.sendGoal(goal);
     ac.waitForResult(goal.trajectory.points[goal.trajectory.points.size()-1].time_from_start + ros::Duration(2.0));
-
     //    auto exec_plan_finish = std::chrono::high_resolution_clock::now();
     //    std::chrono::duration<double> exec_plan_elapsed = exec_plan_finish - exec_plan;
     //    ROS_ERROR_STREAM("Total execution time: " << exec_plan_elapsed.count() << " seconds");
 
-    ROS_ERROR_STREAM("EEF reached position : " << eef_values.get_eef_position(selected_eef)(0)
-                     << " " << eef_values.get_eef_position(selected_eef)(1)
-                     << " " << eef_values.get_eef_position(selected_eef)(2));
+//    ROS_ERROR_STREAM("EEF reached position : " << eef_values.get_eef_position(selected_eef)(0)
+//                                               << " " << eef_values.get_eef_position(selected_eef)(1)
+//                                               << " " << eef_values.get_eef_position(selected_eef)(2));
 
     return 1;
 }

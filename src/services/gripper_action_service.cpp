@@ -91,7 +91,7 @@ int main(int argc, char **argv)
                                                                                                       boost::ref(left_gripper_pub),
                                                                                                       boost::ref(right_gripper_pub),
                                                                                                       boost::ref(eef_values)));
-  ROS_INFO("Ready to move to a position.");
+  ROS_INFO("Ready to open/close gripper.");
   ros::spin();
 
   return 1;

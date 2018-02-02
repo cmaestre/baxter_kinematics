@@ -112,6 +112,8 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
                                                       nh,
                                                       false, // force_orien
                                                       req.feedback,
+                                                      gripper_client,
+                                                      gripper_values_vector,
                                                       traj_res_pub);
         else if(strcmp(req.eef_name.c_str(), "right") == 0)
             traj_res = plan_and_execute_waypoint_traj("right",
@@ -121,6 +123,8 @@ bool trajectory_execution(baxter_kinematics::Trajectory::Request &req,
                                                       nh,
                                                       false, // force_orien
                                                       req.feedback,
+                                                      gripper_client,
+                                                      gripper_values_vector,
                                                       traj_res_pub);
         else{
             ROS_ERROR("please specify in service request, left or right arm");

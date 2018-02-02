@@ -99,6 +99,7 @@ void execute_traj_Callback(const baxter_kinematics::TrajectoryTopic::ConstPtr& t
         // move arms
         auto exec_start = std::chrono::high_resolution_clock::now();
 
+        std::vector<std::string> gripper_values_vector = topic_message->gripper_values;
         int traj_res;
         if(strcmp(eef_name.c_str(), "left") == 0)
             traj_res = plan_and_execute_waypoint_traj("left",
@@ -108,6 +109,8 @@ void execute_traj_Callback(const baxter_kinematics::TrajectoryTopic::ConstPtr& t
                                                       nh,
                                                       false, // force_orien
                                                       feedback,
+                                                      gripper_client,
+                                                      gripper_values_vector,
                                                       traj_res_pub);
         else if(strcmp(eef_name.c_str(), "right") == 0)
             traj_res = plan_and_execute_waypoint_traj("right",
@@ -117,6 +120,8 @@ void execute_traj_Callback(const baxter_kinematics::TrajectoryTopic::ConstPtr& t
                                                       nh,
                                                       false, // force_orien
                                                       feedback,
+                                                      gripper_client,
+                                                      gripper_values_vector,
                                                       traj_res_pub);
         else{
             ROS_ERROR("please specify in message request, left or right arm");

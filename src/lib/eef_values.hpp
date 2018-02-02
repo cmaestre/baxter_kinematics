@@ -161,6 +161,10 @@ public:
         return eef_values.obj_pos_vector;
     }
 
+    std::vector<double>& get_object_state(int pos_id){
+        return eef_values.obj_pos_vector[pos_id].second;
+    }
+
     void set_object_state_vector(std::vector< std::pair<int, std::vector<double> > >& obj_pos_vector_){
 //        ROS_ERROR_STREAM("eef_values : get_object_state_vector " << obj_pos_vector_[0][0] << " " <<
 //                                                                    obj_pos_vector_[0][1] << " " <<

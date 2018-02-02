@@ -46,7 +46,7 @@ int main(int argc, char **argv)
   ros::ServiceServer service = nh.advertiseService<baxter_kinematics::GripperState::Request,
           baxter_kinematics::GripperState::Response>("baxter_kinematics/get_gripper_openness", boost::bind(get_gripper_status, _1, _2,
                                                                                                            boost::ref(eef_values)));
-  ROS_INFO("Ready to move to a position.");
+  ROS_INFO("Ready to get gripper state.");
   ros::spin();
 
   return 1;
