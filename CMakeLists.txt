@@ -3,6 +3,7 @@ project(baxter_kinematics)
 
 
 find_package(catkin REQUIRED COMPONENTS
+  baxter_mover_utils
   trajectory_msgs
   moveit_ros_planning_interface
   roscpp
@@ -25,6 +26,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -fPIC")
 add_message_files(
   FILES
   TrajectoryTopic.msg  
+  ExecuteNewTrajectory.msg
 )
 
 add_service_files(
@@ -77,6 +79,9 @@ add_executable(get_gripper_state_service src/services/get_gripper_state_service.
 target_link_libraries(get_gripper_state_service ${catkin_LIBRARIES} ${Eigen_LIBRARIES})
 
 ## Test files
+
+add_executable(test_batching_trajectories src/tests/test_batching_trajectories.cpp ${all_sources})
+target_link_libraries(test_batching_trajectories ${catkin_LIBRARIES} ${Eigen_LIBRARIES})
 
 add_executable(test_planner src/tests/test_planner.cpp ${all_sources})
 target_link_libraries(test_planner ${catkin_LIBRARIES} ${Eigen_LIBRARIES})

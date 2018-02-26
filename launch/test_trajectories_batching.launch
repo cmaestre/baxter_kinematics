@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<launch>
+
+  <arg name="real_robot" default="false"/>
+  <param name="real_robot" value="$(arg real_robot)"/>
+
+ <!--  <arg name="obj_feedback" default="true"/>
+  <param name="obj_feedback" value="$(arg obj_feedback)"/> -->
+
+  <!-- <node name="joint_interface" pkg="baxter_interface" type="joint_trajectory_action_server.py" output="screen"/> -->
+  <!--include file="$(find baxter_kinematics)/launch/move_group_mimick_node.launch" /-->
+  <!-- <include file="$(find baxter_moveit_config_grasping)/launch/baxter_grippers.launch" />
+ -->
+  <rosparam command="load" file="$(find baxter_kinematics)/src/parameters.yaml" />
+  <rosparam command="load" file="$(find baxter_kinematics)/launch/params/planner_params.yaml" ns="planner_parameters"/>
+
+  <!-- Simulation and Real robot-->
+  <!-- <node name="move_to_position_node" pkg="baxter_kinematics" type="test_batching_trajectories" output="screen" args="joint_states:=/robot/joint_states" launch-prefix="terminator -x gdb -r-args"/> -->
+
+  <node name="move_to_position_node" pkg="baxter_kinematics" type="test_batching_trajectories" output="screen" args="joint_states:=/robot/joint_states" />
+
+</launch>

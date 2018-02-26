@@ -1,0 +1,1 @@
+bool execute_new_trajectory
