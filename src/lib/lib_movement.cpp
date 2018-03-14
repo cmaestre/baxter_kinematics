@@ -668,6 +668,7 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
     yaw = eef_values.get_eef_rpy_orientation(eef_selected)(2);
 
     while(fraction < 1.0 && trials < 50){ // if correct orientation is not feaseble, explore other ones
+        ROS_ERROR_STREAM("trial: " << trials);
         ROS_WARN_STREAM("fraction is: " << fraction << " looking for orientations that will return complete path");
         pitch = pitch + step * pitch_counter;
         if (pitch > max_ang && sign > 0){
@@ -686,14 +687,16 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
             wp_itr->orientation.y = orientation.y();
             wp_itr->orientation.z = orientation.z();
         }
-        // force vertical orientation of final WP
-        if (force_orien){
-            wp_itr = waypoints.end();
-            wp_itr->orientation = correct_orientation.orientation;
-        }
+//        // force vertical orientation of final WP
+//        if (force_orien){
+//            wp_itr = waypoints.end();
+//            wp_itr->orientation = correct_orientation.orientation;
+//        }
 
+        ROS_WARN_STREAM("planning new trajectory");
         fraction = group->computeCartesianPath(waypoints, 0.01, 0, robot_trajectory);
         pitch_counter += 1;
+        ROS_WARN_STREAM("trial + 1");
         trials += 1;
     }
     ROS_ERROR_STREAM("waypoints size is: " << waypoints.size());
