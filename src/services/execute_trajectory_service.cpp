@@ -28,7 +28,7 @@ void obj_state_cloud_Callback(const pcl_tracking::ObjectPosition::ConstPtr& topi
     std::vector< std::pair<int, std::vector<double> > > obj_pos_vector;
     std::vector<double> curr_obj_pos;
     int id;
-    for(int i=0; i < raw_id_pos_vector.size(); i++){
+    for(unsigned i=0; i < raw_id_pos_vector.size(); i++){
         id = raw_id_pos_vector[i].ID;
         curr_obj_pos =  {raw_id_pos_vector[i].object_position.point.x,
                         raw_id_pos_vector[i].object_position.point.y,

@@ -30,6 +30,8 @@
 
 #include <chrono>  // for high_resolution_clock
 
+//enum Class Goal_state {None, succeed, preeemted };
+
 struct Eef_values {
 
     geometry_msgs::Pose l_eef_pose, r_eef_pose;
@@ -50,6 +52,12 @@ struct Eef_values {
     std::vector< std::pair<int, std::vector<double> > > obj_pos_vector;
 
     std::string obj_pos_topic_name;
+
+//    Goal_state goal_left_status = Goal_state::None;
+
+
+    int goal_left_status = 0; //0 = None, 1 = succeed, 2 = preempted
+    int goal_right_status = 0;
 
 };
 
@@ -150,6 +158,15 @@ public:
     ////////////////////////////////////////////
 
     // getters
+    int get_left_goal_status(){
+        return eef_values.goal_left_status;
+    }
+
+    int get_right_goal_status(){
+        return eef_values.goal_right_status;
+    }
+
+
     boost::shared_ptr<moveit::planning_interface::MoveGroup> get_move_group(std::string arm_selected){
         if(strcmp(arm_selected.c_str(), "left_arm") == 0)
             return eef_values.move_group_left_pt_;
@@ -166,9 +183,6 @@ public:
     }
 
     void set_object_state_vector(std::vector< std::pair<int, std::vector<double> > >& obj_pos_vector_){
-//        ROS_ERROR_STREAM("eef_values : get_object_state_vector " << obj_pos_vector_[0][0] << " " <<
-//                                                                    obj_pos_vector_[0][1] << " " <<
-//                                                                    obj_pos_vector_[0][2]);
         eef_values.obj_pos_vector = obj_pos_vector_;
     }
 
@@ -219,7 +233,16 @@ public:
         return eef_values.baxter_arm;
     }
 
+
     // setters
+    void set_left_goal_status(int status){
+        eef_values.goal_left_status = status;
+    }
+
+    void set_right_goal_status(int status){
+        eef_values.goal_right_status = status;
+    }
+
     void set_eef_pose(geometry_msgs::Pose& eef_pose, const std::string gripper){
         if(strcmp(gripper.c_str(), "left_gripper") == 0)
             eef_values.l_eef_pose = eef_pose;

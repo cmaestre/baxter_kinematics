@@ -24,7 +24,7 @@ void right_eef_Callback(const baxter_core_msgs::EndpointState::ConstPtr&  r_eef_
 void obj_state_cloud_Callback(const pcl_tracking::ObjectPosition::ConstPtr& topic_message,
                               Kinematic_values& eef_values){
     std::vector< std::pair<int, std::vector<double> > > obj_pos_vector;
-    for(int i=0; i < topic_message->object_position.size(); i++){
+    for(unsigned i=0; i < topic_message->object_position.size(); i++){
         std::pair<int, std::vector<double> > curr_pair (
                       topic_message->object_position[i].ID,
                     { topic_message->object_position[i].object_position.point.x,
@@ -35,6 +35,50 @@ void obj_state_cloud_Callback(const pcl_tracking::ObjectPosition::ConstPtr& topi
 //        ROS_ERROR_STREAM("obj_state_cloud_Callback : obj_state_cloud_Callback: " << curr_obj_pos[0] << " " << curr_obj_pos[1] << " " << curr_obj_pos[2]);
 
     eef_values.set_object_state_vector(obj_pos_vector);
+}
+
+// a
+void left_goal_Callback(const actionlib_msgs::GoalStatusArray::ConstPtr& msg,
+                        Kinematic_values& eef_values)
+{
+    if (!msg->status_list.empty()){
+        if (msg->status_list.back().status == 3){ // SUCCESS
+            ROS_WARN("SUCCESSFUL GOAL !");
+            eef_values.set_left_goal_status(1);
+//            ros::Duration(0.2).sleep();
+        }
+
+        else if ((msg->status_list.size() > 1) &&
+                 (msg->status_list.back().status == 0) &&
+                 (msg->status_list[msg->status_list.size()-2].status == 3)){ // PREEMTED
+            ROS_WARN("PREEMTED GOAL !");
+            eef_values.set_left_goal_status(2);
+//            ros::Duration(0.2).sleep();
+        }
+    } else
+        eef_values.set_left_goal_status(0);
+}
+
+// a
+void right_goal_Callback(const actionlib_msgs::GoalStatusArray::ConstPtr& msg,
+                        Kinematic_values& eef_values)
+{
+//    if (!msg->status_list.empty()){
+//        int curr_status = msg->status_list[0].status;
+//        eef_values.set_right_goal_status(curr_status);
+//    } else
+//        eef_values.set_right_goal_status(0);
+
+    if (!msg->status_list.empty()){
+        if (msg->status_list.back().status == 3) // SUCCESS
+            eef_values.set_right_goal_status(1);
+        else if ((msg->status_list.size() > 1) &&
+                 (msg->status_list.back().status == 0) &&
+                 (msg->status_list[msg->status_list.size()-2].status == 3)) // PREEMTED
+            eef_values.set_right_goal_status(2);
+    } else
+        eef_values.set_right_goal_status(0);
+
 }
 
 void execute_traj_Callback(const baxter_kinematics::TrajectoryTopic::ConstPtr& topic_message,
@@ -170,6 +214,14 @@ int main(int argc, char **argv)
 
     actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> ac_l("/robot/limb/left/follow_joint_trajectory", true);
     actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> ac_r("/robot/limb/right/follow_joint_trajectory", true);
+    ros::Subscriber sub_goal_feedback_l =
+            nh.subscribe<actionlib_msgs::GoalStatusArray>("/robot/limb/left/follow_joint_trajectory/status", 1,
+                                                                            boost::bind(left_goal_Callback, _1, boost::ref(eef_values)));
+    ros::Subscriber sub_goal_feedback_r =
+            nh.subscribe<actionlib_msgs::GoalStatusArray>("/robot/limb/right/follow_joint_trajectory/status", 1,
+                                                                            boost::bind(right_goal_Callback, _1, boost::ref(eef_values)));
+
+
     ros::ServiceClient gripper_client = nh.serviceClient<baxter_kinematics::GripperAction>("/baxter_kinematics/gripper_action");
     std::string feedback_topic_name;
     nh.getParam("feedback_topic", feedback_topic_name);

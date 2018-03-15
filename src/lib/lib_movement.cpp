@@ -395,7 +395,7 @@ bool optimize_trajectory(std::vector<geometry_msgs::Pose>& vector_to_optimize,
  * @param b
 **/
 void publish_feedback(ros::Publisher traj_res_pub,
-                        Kinematic_values eef_values,
+                        Kinematic_values& eef_values,
                         std::string eef_selected)
   {
     /////////////////// FEEDBACK
@@ -445,40 +445,40 @@ void publish_feedback(ros::Publisher traj_res_pub,
     prev_obj_pos_bool = false;
   }
 
-/**
- * @brief q
- * @param b
-**/
-void doneCb(const actionlib::SimpleClientGoalState& state,
-            ros::Publisher traj_res_pub,
-            Kinematic_values eef_values,
-            std::string eef_selected,
-            std::vector<std::string> gripper_values_vector,
-            ros::ServiceClient gripper_client)
-  {
-    ROS_ERROR_STREAM("INSIDE doneCb");
+///**
+// * @brief q
+// * @param b
+//**/
+//void doneCb(const actionlib::SimpleClientGoalState& state,
+//            ros::Publisher traj_res_pub,
+//            Kinematic_values eef_values,
+//            std::string eef_selected,
+//            std::vector<std::string> gripper_values_vector,
+//            ros::ServiceClient gripper_client)
+//  {
+//    ROS_ERROR_STREAM("INSIDE doneCb");
 
-//    publish_feedback(traj_res_pub, eef_values, eef_selected);
-    std::thread bt(publish_feedback, traj_res_pub, eef_values, eef_selected);
-    bt.detach();
+////    publish_feedback(traj_res_pub, eef_values, eef_selected);
+//    std::thread bt(publish_feedback, traj_res_pub, eef_values, eef_selected);
+//    bt.detach();
 
-    if (!gripper_values_vector.empty()){
-        ROS_INFO_STREAM("doneCb - iter: " << curr_obj_id << " " <<
-                        " gripper action: " << gripper_values_vector[curr_obj_id]);
-        baxter_kinematics::GripperAction srv;
-        srv.request.eef_name = eef_selected;
-        srv.request.action = gripper_values_vector[curr_obj_id];
-        try{
-            gripper_client.call(srv);
-        } catch (const std::exception& e) {
-            ROS_ERROR_STREAM("doneCb : gripper action failed");
-        }
-    } else
-        ROS_ERROR_STREAM("doneCb : no gripper action needed ");
+//    if (!gripper_values_vector.empty()){
+//        ROS_INFO_STREAM("doneCb - iter: " << curr_obj_id << " " <<
+//                        " gripper action: " << gripper_values_vector[curr_obj_id]);
+//        baxter_kinematics::GripperAction srv;
+//        srv.request.eef_name = eef_selected;
+//        srv.request.action = gripper_values_vector[curr_obj_id];
+//        try{
+//            gripper_client.call(srv);
+//        } catch (const std::exception& e) {
+//            ROS_ERROR_STREAM("doneCb : gripper action failed");
+//        }
+//    } else
+//        ROS_ERROR_STREAM("doneCb : no gripper action needed ");
 
 
-    ROS_ERROR_STREAM("doneCb finished ");
-  }
+//    ROS_ERROR_STREAM("doneCb finished ");
+//  }
 
 ///**
 // * @brief q
@@ -492,73 +492,122 @@ void doneCb(const actionlib::SimpleClientGoalState& state,
 //    ROS_ERROR_STREAM("doneCb finished ");
 //  }
 
-///**
-//**/
-//void feedbackCb(ros::Publisher traj_res_pub,
-//                Kinematic_values& eef_values,
-//                std::string eef_selected)
-//{
-////    ROS_INFO_STREAM("Feedback error : " << feedback->error);
-
-//    // check change in the environment
-
-////    print_feedback(traj_res_pub, eef_values, eef_selected);
-//    ROS_ERROR_STREAM("feedbackCb finished ");
-//}
-
 /**
 **/
-void feedbackCb(const control_msgs::FollowJointTrajectoryFeedbackConstPtr& message,
-                Kinematic_values& eef_values,
-                actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>& ac)
-//,
-//                std::vector<double>& prev_object_state_vector,
-//                std::vector< std::pair<int, std::vector<double> > > prev_object_state_vector,
-//                int& curr_obj_id,
-//                bool& prev_obj_pos_bool)
+void feedbackCb(ros::Publisher traj_res_pub,
+                Kinematic_values* eef_values,
+                std::string eef_selected,
+                std::vector<std::string> gripper_values_vector,
+                ros::ServiceClient gripper_client)
 {
-    // Init prev object state
-    if (!prev_obj_pos_bool){
-        if(eef_values.get_object_state_vector().empty())
-            return;
-//        prev_object_state_vector = eef_values.get_object_state_vector();
-        prev_object_state = eef_values.get_object_state(curr_obj_id);
-        prev_obj_pos_bool = true;
-        ROS_ERROR_STREAM("feedbackCb dist - NEW prev_object_state ");
-    }
-    // Check if environment changed
-    else{
-        std::vector<double> curr_object_state;
-        if(eef_values.get_object_state_vector().empty())
-            return;
-//        curr_object_state = eef_values.get_object_state_vector()[0];
-        curr_object_state = eef_values.get_object_state(curr_obj_id);
 
-        double x = curr_object_state[0] - prev_object_state[0];
-        double y = curr_object_state[1] - prev_object_state[1];
-        double z = curr_object_state[2] - prev_object_state[2];
-//        ROS_ERROR_STREAM("feedbackCb dist " << std::sqrt(std::pow(x, 2) + std::pow(y, 2) + std::pow(z, 2)));
-        double min_obj_change;
-        ros::param::get("obj_moved_threshold", min_obj_change);
-        if (std::sqrt(std::pow(x, 2) + std::pow(y, 2) + std::pow(z, 2)) > min_obj_change) {
-            ROS_ERROR_STREAM("feedbackCb - Environment changed");
-            ROS_ERROR_STREAM("feedbackCb - curr_object_state " << curr_object_state [0] << " " <<
-                                                                    curr_object_state [1] << " " <<
-                                                                    curr_object_state [2]);
-            ROS_ERROR_STREAM("feedbackCb - prev_object_state " << prev_object_state [0] << " " <<
-                                                                         prev_object_state [1] << " " <<
-                                                                         prev_object_state [2]);
-            ros::param::set("env_changed", true);
-            ac.cancelAllGoals();
+//    ROS_WARN_STREAM(eef_values->get_right_goal_status());
+
+    if (strcmp(eef_selected.c_str(), "right_gripper") == 0){
+        int status = eef_values->get_right_goal_status();
+        ROS_ERROR_STREAM("Goal status: " << status);
+        if ((status == 1) or (status == 2)){
+            //        std::thread bt(publish_feedback, traj_res_pub, eef_values, eef_selected);
+            //        bt.detach();
+            publish_feedback (traj_res_pub, *eef_values, eef_selected);
+
+            if (!gripper_values_vector.empty()){
+                ROS_INFO_STREAM("doneCb - iter: " << curr_obj_id << " " <<
+                                " gripper action: " << gripper_values_vector[curr_obj_id]);
+                baxter_kinematics::GripperAction srv;
+                srv.request.eef_name = eef_selected;
+                srv.request.action = gripper_values_vector[curr_obj_id];
+                try{
+                    gripper_client.call(srv);
+                } catch (const std::exception& e) {
+                    ROS_ERROR_STREAM("doneCb : gripper action failed");
+                }
+            } else
+                ROS_ERROR_STREAM("doneCb : no gripper action needed ");
         }
-
-//        ROS_ERROR_STREAM("feedbackCb finished " << object_state_vector [0] << " " <<
-//                                                   object_state_vector [1] << " " <<
-//                                                   object_state_vector [2]);
     }
+//    else
+//        status = eef_values->get_left_goal_status();
 
-//    ROS_ERROR_STREAM("feedbackCb finished");
+//    ROS_ERROR_STREAM("Goal status: " << status);
+//    if ((status == 2) or (status == 3)){
+
+////        std::thread bt(publish_feedback, traj_res_pub, eef_values, eef_selected);
+////        bt.detach();
+//        publish_feedback (traj_res_pub, eef_values, eef_selected);
+
+//        if (!gripper_values_vector.empty()){
+//            ROS_INFO_STREAM("doneCb - iter: " << curr_obj_id << " " <<
+//                            " gripper action: " << gripper_values_vector[curr_obj_id]);
+//            baxter_kinematics::GripperAction srv;
+//            srv.request.eef_name = eef_selected;
+//            srv.request.action = gripper_values_vector[curr_obj_id];
+//            try{
+//                gripper_client.call(srv);
+//            } catch (const std::exception& e) {
+//                ROS_ERROR_STREAM("doneCb : gripper action failed");
+//            }
+//        } else
+//            ROS_ERROR_STREAM("doneCb : no gripper action needed ");
+
+//    }
+
+    ROS_ERROR_STREAM("feedbackCb finished ");
 }
+
+///**
+//**/
+//void feedbackCb(const control_msgs::FollowJointTrajectoryFeedbackConstPtr& message,
+//                Kinematic_values& eef_values,
+//                actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>& ac)
+////,
+////                std::vector<double>& prev_object_state_vector,
+////                std::vector< std::pair<int, std::vector<double> > > prev_object_state_vector,
+////                int& curr_obj_id,
+////                bool& prev_obj_pos_bool)
+//{
+//    // Init prev object state
+//    if (!prev_obj_pos_bool){
+//        if(eef_values.get_object_state_vector().empty())
+//            return;
+////        prev_object_state_vector = eef_values.get_object_state_vector();
+//        prev_object_state = eef_values.get_object_state(curr_obj_id);
+//        prev_obj_pos_bool = true;
+//        ROS_ERROR_STREAM("feedbackCb dist - NEW prev_object_state ");
+//    }
+//    // Check if environment changed
+//    else{
+//        std::vector<double> curr_object_state;
+//        if(eef_values.get_object_state_vector().empty())
+//            return;
+////        curr_object_state = eef_values.get_object_state_vector()[0];
+//        curr_object_state = eef_values.get_object_state(curr_obj_id);
+
+//        double x = curr_object_state[0] - prev_object_state[0];
+//        double y = curr_object_state[1] - prev_object_state[1];
+//        double z = curr_object_state[2] - prev_object_state[2];
+////        ROS_ERROR_STREAM("feedbackCb dist " << std::sqrt(std::pow(x, 2) + std::pow(y, 2) + std::pow(z, 2)));
+//        double min_obj_change;
+//        ros::param::get("obj_moved_threshold", min_obj_change);
+//        if (std::sqrt(std::pow(x, 2) + std::pow(y, 2) + std::pow(z, 2)) > min_obj_change) {
+//            ROS_ERROR_STREAM("feedbackCb - Environment changed");
+//            ROS_ERROR_STREAM("feedbackCb - curr_object_state " << curr_object_state [0] << " " <<
+//                                                                    curr_object_state [1] << " " <<
+//                                                                    curr_object_state [2]);
+//            ROS_ERROR_STREAM("feedbackCb - prev_object_state " << prev_object_state [0] << " " <<
+//                                                                         prev_object_state [1] << " " <<
+//                                                                         prev_object_state [2]);
+//            ros::param::set("env_changed", true);
+//            ac.cancelAllGoals();
+//        }
+
+////        ROS_ERROR_STREAM("feedbackCb finished " << object_state_vector [0] << " " <<
+////                                                   object_state_vector [1] << " " <<
+////                                                   object_state_vector [2]);
+//    }
+
+////    ROS_ERROR_STREAM("feedbackCb finished");
+//}
 
 // Called once when the goal becomes active
 void activeCb()
@@ -605,16 +654,16 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
                                    ros::Publisher traj_res_pub){
 
 
-    std::vector< std::pair<int, std::vector<double> > > obj_pos_id_vector;
-    if(eef_values.get_object_state_vector().empty())
-        return -1;
-    obj_pos_id_vector = eef_values.get_object_state_vector();
-    for (const std::pair<int, std::vector<double> >& curr_obj_id_pos : obj_pos_id_vector){
-        ROS_ERROR_STREAM("Object ID: " << curr_obj_id_pos.first <<
-                         " Object pos: " << curr_obj_id_pos.second [0] << " " <<
-                                            curr_obj_id_pos.second [1] << " " <<
-                                            curr_obj_id_pos.second [2]);
-    }
+//    std::vector< std::pair<int, std::vector<double> > > obj_pos_id_vector;
+//    if(eef_values.get_object_state_vector().empty())
+//        return -1;
+//    obj_pos_id_vector = eef_values.get_object_state_vector();
+//    for (const std::pair<int, std::vector<double> >& curr_obj_id_pos : obj_pos_id_vector){
+//        ROS_ERROR_STREAM("Object ID: " << curr_obj_id_pos.first <<
+//                         " Object pos: " << curr_obj_id_pos.second [0] << " " <<
+//                                            curr_obj_id_pos.second [1] << " " <<
+//                                            curr_obj_id_pos.second [2]);
+//    }
 
     ROS_ERROR_STREAM("Init plan : " << time_since_epoch());
 
@@ -758,21 +807,30 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
         curr_obj_id = 0;
 
     if (feedback_data){
+//        ROS_WARN_STREAM(eef_values.get_right_goal_status());
+
         nb_wp_reached = 0;
+//        ac.sendGoal(goal,
+//                    boost::bind(doneCb, _1,
+//                                traj_res_pub,
+//                                eef_values,
+//                                eef_selected,
+//                                gripper_values_vector,
+//                                gripper_client),
+//                    actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>::SimpleActiveCallback(),
+//                    actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>::SimpleFeedbackCallback());
+
         ac.sendGoal(goal,
-                    boost::bind(doneCb, _1,
+                    actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>::SimpleDoneCallback(),
+                    activeCb,
+                    boost::bind(feedbackCb,
                                 traj_res_pub,
-                                eef_values,
+                                &eef_values,
                                 eef_selected,
                                 gripper_values_vector,
-                                gripper_client),
-//                    boost::bind(doneCb, _1,
-//                                boost::ref(traj_res_pub)),
-//                    actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>::SimpleDoneCallback(),
-//                    actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>::SimpleActiveCallback(),
-                    activeCb,
-                    actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>::SimpleFeedbackCallback()
-                    );
+                                gripper_client)
+//                    actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>::SimpleFeedbackCallback()
+                 );
     }
     else
         ac.sendGoal(goal);
