@@ -4,6 +4,7 @@
 #include <iostream>
 #include <chrono>
 #include <type_traits>
+#include <thread>
 
 //std::vector<double> prev_object_state_vector;
 //std::vector< std::pair<int, std::vector<double> > > prev_object_state_vector;
@@ -394,11 +395,11 @@ bool optimize_trajectory(std::vector<geometry_msgs::Pose>& vector_to_optimize,
  * @param b
 **/
 void publish_feedback(ros::Publisher traj_res_pub,
-                        Kinematic_values& eef_values,
+                        Kinematic_values eef_values,
                         std::string eef_selected)
   {
     /////////////////// FEEDBACK
-//    ROS_ERROR_STREAM("STORE/PUBLISH FEEDBACK");
+    ROS_ERROR_STREAM("STORE/PUBLISH FEEDBACK");
 //    auto feedback_t = std::chrono::high_resolution_clock::now();
 //    ROS_ERROR_STREAM("WP " << nb_wp_to_reach << " REACHED for feedback");
 //    ROS_ERROR_STREAM("Goal state " << state.getText().c_str());
@@ -449,12 +450,17 @@ void publish_feedback(ros::Publisher traj_res_pub,
  * @param b
 **/
 void doneCb(const actionlib::SimpleClientGoalState& state,
-            ros::Publisher traj_res_pub,            Kinematic_values& eef_values,
+            ros::Publisher traj_res_pub,
+            Kinematic_values eef_values,
             std::string eef_selected,
             std::vector<std::string> gripper_values_vector,
             ros::ServiceClient gripper_client)
   {
-    publish_feedback(traj_res_pub, eef_values, eef_selected);
+    ROS_ERROR_STREAM("INSIDE doneCb");
+
+//    publish_feedback(traj_res_pub, eef_values, eef_selected);
+    std::thread bt(publish_feedback, traj_res_pub, eef_values, eef_selected);
+    bt.detach();
 
     if (!gripper_values_vector.empty()){
         ROS_INFO_STREAM("doneCb - iter: " << curr_obj_id << " " <<
@@ -473,6 +479,18 @@ void doneCb(const actionlib::SimpleClientGoalState& state,
 
     ROS_ERROR_STREAM("doneCb finished ");
   }
+
+///**
+// * @brief q
+// * @param b
+//**/
+//void doneCb(const actionlib::SimpleClientGoalState& state,
+//            ros::Publisher traj_res_pub)
+//  {
+//    ROS_ERROR_STREAM("INSIDE doneCb");
+
+//    ROS_ERROR_STREAM("doneCb finished ");
+//  }
 
 ///**
 //**/
@@ -542,7 +560,11 @@ void feedbackCb(const control_msgs::FollowJointTrajectoryFeedbackConstPtr& messa
 //    ROS_ERROR_STREAM("feedbackCb finished");
 }
 
-
+// Called once when the goal becomes active
+void activeCb()
+{
+  ROS_ERROR_STREAM("Goal just went active !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+}
 
 void goto_initial_position(std::string selected_eef,
                            geometry_msgs::Pose& pose,
@@ -571,7 +593,6 @@ void goto_initial_position(std::string selected_eef,
  * @brief Plan and execute waypoint trajectory
  * @param b
 **/
-//trajectory_msgs::JointTrajectory plan_trajectory(
 int plan_and_execute_waypoint_traj(std::string selected_eef,
                                    std::vector<geometry_msgs::Pose> waypoints,
                                    actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>& ac,
@@ -722,50 +743,42 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
     control_msgs::FollowJointTrajectoryGoal goal;
     goal.trajectory = robot_trajectory.joint_trajectory;
     goal.goal_time_tolerance = ros::Duration(0);
+//    for (unsigned i=0; i < goal.trajectory.points.size(); i++){
+//        ROS_ERROR_STREAM("Velocities of points " << std::to_string(i));
+//        auto curr_vel_vector = goal.trajectory.points[i].velocities;
+//        for (auto curr_vel : curr_vel_vector) {
+//            curr_vel = 1;
+//            ROS_ERROR_STREAM(curr_vel);
+//        }
+//    }
+//    goal.trajectory.points[0].velocities = goal.trajectory.points[1].velocities;
+
     prev_obj_pos_bool= false;
     if (!ros::param::get("curr_obj_id", curr_obj_id))
         curr_obj_id = 0;
+
     if (feedback_data){
         nb_wp_reached = 0;
         ac.sendGoal(goal,
                     boost::bind(doneCb, _1,
-                                boost::ref(traj_res_pub),
-                                boost::ref(eef_values),
-                                boost::ref(eef_selected),
-                                boost::ref(gripper_values_vector),
-                                boost::ref(gripper_client)),
-                    actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>::SimpleActiveCallback(),
+                                traj_res_pub,
+                                eef_values,
+                                eef_selected,
+                                gripper_values_vector,
+                                gripper_client),
+//                    boost::bind(doneCb, _1,
+//                                boost::ref(traj_res_pub)),
+//                    actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>::SimpleDoneCallback(),
+//                    actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>::SimpleActiveCallback(),
+                    activeCb,
                     actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>::SimpleFeedbackCallback()
-//                    boost::bind(feedbackCb, _1,
-//                                boost::ref(eef_values),
-//                                boost::ref(ac))
-//                    ,
-////                                boost::ref(prev_object_state_vector),
-//                                boost::ref(curr_obj_id),
-//                                boost::ref(prev_obj_pos_bool))
                     );
-
-//        // Stop the goal if there is a change in the environment
-//        bool env_changed;
-//        ros::param::get("env_changed", env_changed);
-//        while ((ac.getState() == actionlib::SimpleClientGoalState::ACTIVE) && !env_changed) {
-//            ros::param::get("env_changed", env_changed);
-//            if (env_changed) {
-//                ROS_ERROR_STREAM("plan_and_execute_waypoint_traj - Environment changed");
-//                ac.cancelAllGoals();
-//            }
-//        }
     }
     else
         ac.sendGoal(goal);
-    ac.waitForResult(goal.trajectory.points[goal.trajectory.points.size()-1].time_from_start + ros::Duration(2.0));
-    //    auto exec_plan_finish = std::chrono::high_resolution_clock::now();
-    //    std::chrono::duration<double> exec_plan_elapsed = exec_plan_finish - exec_plan;
-    //    ROS_ERROR_STREAM("Total execution time: " << exec_plan_elapsed.count() << " seconds");
 
-//    ROS_ERROR_STREAM("EEF reached position : " << eef_values.get_eef_position(selected_eef)(0)
-//                                               << " " << eef_values.get_eef_position(selected_eef)(1)
-//                                               << " " << eef_values.get_eef_position(selected_eef)(2));
+//    ac.waitForResult(goal.trajectory.points[goal.trajectory.points.size()-1].time_from_start + ros::Duration(2.0));
+//    ros::Duration(1.5).sleep();
 
     return 1;
 }
