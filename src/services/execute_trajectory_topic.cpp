@@ -41,22 +41,23 @@ void obj_state_cloud_Callback(const pcl_tracking::ObjectPosition::ConstPtr& topi
 void left_goal_Callback(const actionlib_msgs::GoalStatusArray::ConstPtr& msg,
                         Kinematic_values& eef_values)
 {
-    if (!msg->status_list.empty()){
-        if (msg->status_list.back().status == 3){ // SUCCESS
-            ROS_WARN("SUCCESSFUL GOAL !");
-            eef_values.set_left_goal_status(1);
-//            ros::Duration(0.2).sleep();
-        }
+//    if (!msg->status_list.empty()){
+//        if (msg->status_list.back().status == 3){ // SUCCESS
+//            ROS_WARN("SUCCESSFUL GOAL !");
+//            eef_values.set_left_goal_status(1);
+////            ros::Duration(0.2).sleep();
+//        }
 
-        else if ((msg->status_list.size() > 1) &&
-                 (msg->status_list.back().status == 0) &&
-                 (msg->status_list[msg->status_list.size()-2].status == 3)){ // PREEMTED
-            ROS_WARN("PREEMTED GOAL !");
-            eef_values.set_left_goal_status(2);
+////        else if ((msg->status_list.size() > 1) &&
+////                 (msg->status_list.back().status == 0) &&
+////                 (msg->status_list[msg->status_list.size()-2].status == 3)){ // PREEMTED
+//        else if (msg->status_list.back().status == 0){ // PREEMTED
+//            ROS_WARN("PREEMTED GOAL !");
+//            eef_values.set_left_goal_status(2);
 //            ros::Duration(0.2).sleep();
-        }
-    } else
-        eef_values.set_left_goal_status(0);
+//        }
+//    } else
+//        eef_values.set_left_goal_status(0);
 }
 
 // a
@@ -70,12 +71,17 @@ void right_goal_Callback(const actionlib_msgs::GoalStatusArray::ConstPtr& msg,
 //        eef_values.set_right_goal_status(0);
 
     if (!msg->status_list.empty()){
-        if (msg->status_list.back().status == 3) // SUCCESS
+        if ((eef_values.get_right_goal_status() == 0) &&
+                (msg->status_list.back().status == 3)) // SUCCESS
             eef_values.set_right_goal_status(1);
-        else if ((msg->status_list.size() > 1) &&
-                 (msg->status_list.back().status == 0) &&
-                 (msg->status_list[msg->status_list.size()-2].status == 3)) // PREEMTED
+//        else if ((msg->status_list.size() > 1) &&
+//                 (msg->status_list.back().status == 0) &&
+//                 (msg->status_list[msg->status_list.size()-2].status == 3)) // PREEMTED
+        else if ((eef_values.get_right_goal_status() == 0) &&
+                     (msg->status_list.back().status == 0)) { // PREEMTED
             eef_values.set_right_goal_status(2);
+//            ros::Duration(0.2).sleep();
+        }
     } else
         eef_values.set_right_goal_status(0);
 

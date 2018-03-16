@@ -522,8 +522,8 @@ void feedbackCb(ros::Publisher traj_res_pub,
                 } catch (const std::exception& e) {
                     ROS_ERROR_STREAM("doneCb : gripper action failed");
                 }
-            } else
-                ROS_ERROR_STREAM("doneCb : no gripper action needed ");
+            } //else
+//                ROS_ERROR_STREAM("doneCb : no gripper action needed ");
         }
     }
 //    else
@@ -552,7 +552,7 @@ void feedbackCb(ros::Publisher traj_res_pub,
 
 //    }
 
-    ROS_ERROR_STREAM("feedbackCb finished ");
+//    ROS_ERROR_STREAM("feedbackCb finished ");
 }
 
 ///**
@@ -801,6 +801,15 @@ int plan_and_execute_waypoint_traj(std::string selected_eef,
 //        }
 //    }
 //    goal.trajectory.points[0].velocities = goal.trajectory.points[1].velocities;
+
+
+    for (unsigned i=0; i < goal.trajectory.points.size(); i++){
+        ROS_ERROR_STREAM("Accelerations of points " << std::to_string(i));
+        auto curr_acc_vector = goal.trajectory.points[i].accelerations;
+        for (auto curr_acc : curr_acc_vector) {
+            ROS_ERROR_STREAM(curr_acc);
+        }
+    }
 
     prev_obj_pos_bool= false;
     if (!ros::param::get("curr_obj_id", curr_obj_id))
